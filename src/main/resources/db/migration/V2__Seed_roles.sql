@@ -1,7 +1,7 @@
 -- Seed initial roles
 INSERT INTO
-  roles (role_name, created_at)
+  roles (role_name)
 VALUES
-  ('STUDENT', NOW()),
-  ('TEACHER', NOW()),
-  ('ADMIN', NOW());
+  ('STUDENT'),
+  ('TEACHER'),
+  ('ADMIN');
