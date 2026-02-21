@@ -1,7 +1,6 @@
 package main.backend.auth.entity;
 
 import jakarta.persistence.*;
-import java.time.Instant;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -24,12 +23,4 @@ public class Role {
   @Enumerated(EnumType.STRING)
   @Column(name = "role_name", nullable = false, unique = true, length = 20)
   private RoleType roleName;
-
-  @Column(name = "created_at", nullable = false, updatable = false)
-  private Instant createdAt;
-
-  @PrePersist
-  protected void onCreate() {
-    createdAt = Instant.now();
-  }
 }

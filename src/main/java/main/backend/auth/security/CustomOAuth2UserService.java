@@ -7,6 +7,7 @@ import main.backend.auth.entity.User;
 import main.backend.auth.enums.RoleType;
 import main.backend.auth.repository.RoleRepository;
 import main.backend.auth.repository.UserRepository;
+import main.backend.common.util.IdGenerator;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
@@ -81,6 +82,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
       .orElseThrow(() -> new RuntimeException("Role not found: " + roleType));
 
     User user = User.builder()
+      .userId(IdGenerator.generateUserId())
       .email(email)
       .googleId(googleId)
       .fullName(name)

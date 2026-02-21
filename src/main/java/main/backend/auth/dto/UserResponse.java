@@ -12,7 +12,7 @@ import main.backend.auth.enums.RoleType;
 @AllArgsConstructor
 public class UserResponse {
 
-  private Long userId;
+  private String userId;
   private String email;
   private String fullName;
   private String avatarUrl;
