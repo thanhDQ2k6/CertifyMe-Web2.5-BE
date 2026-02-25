@@ -8,7 +8,7 @@ import main.backend.lms.entity.QuizQuestion;
 import main.backend.lms.repository.EnrollmentRepository;
 import main.backend.lms.repository.QuestionRepository;
 import main.backend.lms.repository.QuizRepository;
-import main.backend.repository.*;
+import main.backend.lms.repository.*;
 import main.backend.lms.service.QuizService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
