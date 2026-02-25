@@ -1,9 +1,7 @@
 package main.backend.lms.constant;
 
 public enum ClassStatus {
-    ACTIVE,      // Thêm cái này cho Entity
-    UPCOMING,    // Thêm cái này cho Service
-    ONGOING,
-    COMPLETED,
-    CANCELED     // Dùng cho xóa mềm
+    ACTIVE,    // Lớp đang mở
+    COMPLETED, // Lớp đã kết thúc
+    CANCELED   // Lớp bị hủy (Xóa mềm)
 }
