@@ -36,7 +36,7 @@ public class AuthController {
   }
 
   // Endpoint để frontend kiểm tra role-based access
-  @GetMapping("/check-role")
+      @GetMapping("/check-role")
   @PreAuthorize("hasAnyRole('STUDENT', 'TEACHER', 'ADMIN')")
   public ResponseEntity<ApiResponse<String>> checkRole(
     @AuthenticationPrincipal UserPrincipal userPrincipal
