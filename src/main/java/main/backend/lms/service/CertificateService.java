@@ -6,6 +6,7 @@ import main.backend.lms.dto.response.CertificateResponse;
 import main.backend.lms.model.Certificate;
 import main.backend.lms.model.ClassEntity;
 import main.backend.lms.model.CourseEntity;
+import main.backend.lms.model.Enrollment;
 import main.backend.lms.repository.CertificateRepository;
 import main.backend.lms.repository.ClassRepository;
 import main.backend.lms.repository.EnrollmentRepository;
@@ -32,7 +33,9 @@ public class CertificateService {
         // 2. Kiểm tra xem sinh viên đã Pass hết đống Class này chưa
         for (ClassEntity classEntity : allInfoClasses) {
             boolean isPassed = enrollmentRepository.existsByStudent_UserIdAndClassEntity_ClassIdAndStatus(
-                    studentId, classEntity.getClassId(), "PASSED"
+                    studentId,
+                    classEntity.getClassId(),
+                    Enrollment.EnrollmentStatus.PASSED // Sử dụng Enum thay vì String
             );
             if (!isPassed) return false; // Chỉ cần 1 lớp chưa pass là nghỉ khỏe, chưa có bằng!
         }
