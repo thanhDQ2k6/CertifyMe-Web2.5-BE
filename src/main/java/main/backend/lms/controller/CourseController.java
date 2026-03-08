@@ -1,33 +1,30 @@
 package main.backend.lms.controller;
 
-import main.backend.lms.entity.Course;
+import main.backend.lms.dto.response.CourseDetailResponse;
 import main.backend.lms.service.CourseService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/v1/courses")
+@RequestMapping("/api/courses")
 public class CourseController {
 
-    @Autowired private CourseService courseService;
+    @Autowired
+    private CourseService courseService; // Đảm bảo ông đã có CourseService nhé
 
-    @GetMapping
-    public ResponseEntity<List<Course>> getAll() {
-        return ResponseEntity.ok(courseService.getAllActiveCourses());
-    }
+    @GetMapping("/{courseId}")
+    public ResponseEntity<?> getCourseDetail(@PathVariable String courseId) {
+        // 1. Lấy studentId từ SecurityContext (Token)
+        // Tui tạm lấy cứng "u1" để ông test, sau này phải lấy từ User hiện tại
+        String studentId = "u1";
 
-    @PostMapping
-    public ResponseEntity<Course> create(@RequestBody Course course) {
-        return ResponseEntity.ok(courseService.createCourse(course));
-    }
+        // 2. Gọi đúng tên hàm mới: getCourseDetail
+        CourseDetailResponse response = courseService.getCourseDetail(courseId, studentId);
 
-    // XÓA KIỂU CẬP NHẬT (Soft Delete)
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable String id) {
-        courseService.softDeleteCourse(id);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(response);
     }
 }

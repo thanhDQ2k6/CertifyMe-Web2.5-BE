@@ -1,36 +1,34 @@
 package main.backend.lms.controller;
 
-import main.backend.lms.dto.request.QuizSubmissionRequest;
+import lombok.RequiredArgsConstructor;
 import main.backend.lms.dto.response.QuizResultResponse;
-import main.backend.lms.entity.Quiz;
 import main.backend.lms.service.QuizService;
-import org.springframework.beans.factory.annotation.Autowired;
+import main.backend.lms.service.StudentService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import main.backend.lms.dto.response.CertificateResponse;
+import java.util.stream.Collectors;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/quizzes")
+@RequestMapping("/api") // Đảm bảo có prefix /api nếu Postman gọi /api/...
+@RequiredArgsConstructor
 public class QuizController {
 
-    @Autowired
-    private QuizService quizService;
+    private final QuizService quizService;
+    private final StudentService studentService;
 
-    @GetMapping("/class/{classId}")
-    public ResponseEntity<List<Quiz>> getByClass(@PathVariable String classId) {
-        return ResponseEntity.ok(quizService.getQuizzesByClass(classId));
+    // POST /api/quizzes/{quizId}/submit
+    @PostMapping("/quizzes/{quizId}/submit")
+    public ResponseEntity<QuizResultResponse> submitQuiz(
+            @PathVariable String quizId,
+            @RequestBody List<String> answers) {
+
+        // Tạm thời fix cứng studentId là "u1" để test, sau này lấy từ JWT
+        String studentId = "u1";
+        return ResponseEntity.ok(quizService.submitQuiz(quizId, studentId, answers));
     }
 
-    // NỘP BÀI VÀ NHẬN KẾT QUẢ TỨC THÌ
-    @PostMapping("/submit")
-    public ResponseEntity<QuizResultResponse> submit(@RequestBody QuizSubmissionRequest request) {
-        return ResponseEntity.ok(quizService.submitQuiz(request));
-    }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable String id) {
-        quizService.softDeleteQuiz(id);
-        return ResponseEntity.noContent().build();
-    }
 }

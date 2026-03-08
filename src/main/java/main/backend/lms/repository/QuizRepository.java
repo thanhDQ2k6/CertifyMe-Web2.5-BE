@@ -1,12 +1,14 @@
 package main.backend.lms.repository;
 
-import main.backend.lms.constant.QuizStatus;
-import main.backend.lms.entity.Quiz;
+import main.backend.lms.model.ClassEntity;
+import main.backend.lms.model.Quiz;
 import org.springframework.data.jpa.repository.JpaRepository;
-
+import org.springframework.stereotype.Repository;
 import java.util.List;
 
+@Repository
 public interface QuizRepository extends JpaRepository<Quiz, String> {
-    // Lấy danh sách Quiz của một lớp mà chưa bị đóng (Xóa mềm)
-    List<Quiz> findByClazz_ClassIdAndStatusNot(String classId, QuizStatus status);
+
+    // Lấy tất cả quiz của một lớp học
+    List<Quiz> findByClassEntity(ClassEntity classEntity);
 }
