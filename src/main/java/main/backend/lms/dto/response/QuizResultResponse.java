@@ -1,12 +1,15 @@
 package main.backend.lms.dto.response;
 
-import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 
+import java.time.LocalDateTime;
+
 @Data
-@AllArgsConstructor
+@Builder
 public class QuizResultResponse {
-    private double score;
-    private boolean isPassed;
-    private String message;
+    private Double score;
+    private Double maxScore;
+    private String status;
+    private LocalDateTime submittedAt;
 }

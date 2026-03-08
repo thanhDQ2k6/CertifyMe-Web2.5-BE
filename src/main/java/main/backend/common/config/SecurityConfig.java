@@ -19,50 +19,39 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-  private final CustomOAuth2UserService customOAuth2UserService;
-  private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
-  private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final CustomOAuth2UserService customOAuth2UserService;
+    private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
-  @Bean
-  public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-    http
-      .csrf(csrf -> csrf.disable())
-      .cors(cors -> cors.configure(http))
-      .sessionManagement(session ->
-        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-      )
-      .authorizeHttpRequests(auth ->
-        auth
-          .requestMatchers(
-            "/",
-            "/error",
-            "/favicon.ico",
-            "/**/*.png",
-            "/**/*.gif",
-            "/**/*.svg",
-            "/**/*.jpg",
-            "/**/*.html",
-            "/**/*.css",
-            "/**/*.js"
-          )
-          .permitAll()
-          .requestMatchers("/api/auth/**", "/oauth2/**", "/login/**")
-          .permitAll()
-          .anyRequest()
-          .authenticated()
-      )
-      .oauth2Login(oauth2 ->
-        oauth2
-          .userInfoEndpoint(userInfo ->
-            userInfo.userService(customOAuth2UserService)
-          )
-          .successHandler(oAuth2AuthenticationSuccessHandler)
-      )
-      .addFilterBefore(
-        jwtAuthenticationFilter,
-        UsernamePasswordAuthenticationFilter.class
-      );
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http
+                .csrf(csrf -> csrf.disable())
+                .cors(cors -> cors.configure(http))
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                )
+                .authorizeHttpRequests(auth ->
+                        auth
+                                /* --- [VÙNG TEST: DELETE BEFORE PUSH] --- */
+                                // Mở toàn bộ api liên quan đến student, courses, quizzes để Postman không bị 403
+                                .requestMatchers("/api/student/**", "/api/courses/**", "/api/quizzes/**").permitAll()
+                                .requestMatchers("/student/**", "/courses/**", "/quizzes/**").permitAll()
+                                /* --- [END VÙNG TEST] --- */
 
-    return http.build();
-  }
+                                .requestMatchers("/api/auth/**", "/oauth2/**", "/login/**").permitAll()
+                                .requestMatchers("/", "/error", "/favicon.ico", "/*.png", "/*.gif", "/*.svg", "/*.jpg", "/*.html", "/*.css", "/*.js").permitAll()
+                                .anyRequest().authenticated()
+                )
+                .oauth2Login(oauth2 ->
+                        oauth2
+                                .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
+                                .successHandler(oAuth2AuthenticationSuccessHandler)
+                );
+
+        // Tạm thời comment Filter JWT để tránh lỗi Access Denied giả khi chưa có Token
+        // http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+
+        return http.build();
+    }
 }

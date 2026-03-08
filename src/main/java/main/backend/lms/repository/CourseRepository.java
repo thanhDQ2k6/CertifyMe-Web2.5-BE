@@ -1,11 +1,9 @@
 package main.backend.lms.repository;
 
-import main.backend.lms.entity.Course;
+import main.backend.lms.model.CourseEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 
-import java.util.List;
-
-public interface CourseRepository extends JpaRepository<Course, String> {
-    // Lấy các khóa học chưa bị "xóa mềm"
-    List<Course> findByIsActiveTrue();
+@Repository
+public interface CourseRepository extends JpaRepository<CourseEntity, String> {
 }

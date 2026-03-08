@@ -1,13 +1,10 @@
 package main.backend.lms.repository;
 
-import main.backend.lms.constant.EnrollmentStatus;
-import main.backend.lms.entity.Enrollment;
+import main.backend.lms.model.Enrollment;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param; // Dòng này cực kỳ quan trọng
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -15,19 +12,20 @@ import java.util.Optional;
 @Repository
 public interface EnrollmentRepository extends JpaRepository<Enrollment, Long> {
 
-    // Lấy theo Student ID (Đã sửa tên method cho khớp với Entity User)
+    // 1. Hàm này phục vụ cho Dashboard (Lấy toàn bộ danh sách khóa học của 1 sv)
+    // ĐÂY LÀ HÀM ÔNG ĐANG THIẾU DẪN ĐẾN LỖI compile
     List<Enrollment> findByStudent_UserId(String studentId);
 
-    // Lấy danh sách đang học
-    List<Enrollment> findByStudent_UserIdAndStatus(String studentId, EnrollmentStatus status);
+    // 2. Hàm này phục vụ cho việc Update sau khi nộp bài Quiz
+    Optional<Enrollment> findByStudent_UserIdAndClassEntity_ClassId(String studentId, String classId);
 
-    // Tìm bản ghi cụ thể để check SV có trong lớp không
-    Optional<Enrollment> findByStudent_UserIdAndClazz_ClassId(String studentId, String classId);
+    // 3. Hàm này phục vụ cho trang chi tiết khóa học (Course Detail)
+    @Query("SELECT e FROM Enrollment e WHERE e.student.userId = :studentId AND e.classEntity.course.courseId = :courseId")
+    Optional<Enrollment> findByStudentIdAndCourseId(
+            @Param("studentId") String studentId,
+            @Param("courseId") String courseId
+    );
 
-    // Tự động tăng số Quiz đã pass - Đã fix Params
-    @Modifying
-    @Transactional
-    @Query("UPDATE Enrollment e SET e.passedQuizzes = e.passedQuizzes + 1 " +
-            "WHERE e.student.userId = :studentId AND e.clazz.classId = :classId")
-    void incrementPassedQuizzes(@Param("studentId") String studentId, @Param("classId") String classId);
+    // 4. Hàm kiểm tra trạng thái (Dùng Enum chuẩn)
+    boolean existsByStudent_UserIdAndClassEntity_ClassIdAndStatus(String userId, String classId, Enrollment.EnrollmentStatus status);
 }
