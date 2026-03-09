@@ -10,8 +10,7 @@ public class CourseEntity {
     @Id
     @Column(name = "course_id")
     private String courseId;
-    @Column(name = "course_icon")
-    private String courseIcon; // Sẽ nhận giá trị "icon_java"
+
     @Column(name = "course_code")
     private String courseCode;
 
@@ -20,7 +19,9 @@ public class CourseEntity {
 
     private String description;
 
-    // THÊM DÒNG NÀY VÀO LÀ HẾT LỖI
+    @Column(name = "created_at", insertable = false, updatable = false)
+    private java.time.LocalDateTime createdAt;
+
     @Column(name = "is_active")
     private boolean isActive;
 

@@ -15,7 +15,6 @@ public class Question {
     @Column(name = "question_id")
     private Long questionId;
 
-    // CHỈ ĐỂ DUY NHẤT CỤM NÀY, XÓA CÁC BIẾN "quiz" KHÁC NẾU CÓ
     @ManyToOne
     @JoinColumn(name = "quiz_id", nullable = false)
     private Quiz quiz;

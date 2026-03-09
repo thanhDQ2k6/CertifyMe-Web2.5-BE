@@ -11,13 +11,13 @@ public class QuizRequestDTO {
     private Integer duration;
     private Double passingScore;
     private Integer maxScore;
-    private List<QuestionRequestDTO> questions; // Hứng mảng câu hỏi
+    private List<QuestionRequestDTO> questions;
 
     @Data
     public static class QuestionRequestDTO {
         private String questionText;
         private String questionType;
-        private List<OptionRequestDTO> options; // Hứng mảng đáp án
+        private List<OptionRequestDTO> options;
     }
 
     @Data

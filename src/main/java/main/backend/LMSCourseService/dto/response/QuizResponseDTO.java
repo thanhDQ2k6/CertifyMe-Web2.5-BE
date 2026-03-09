@@ -1,4 +1,4 @@
-package main.backend.lms.dto.response;
+package main.backend.LMSCourseService.dto.response;
 
 import lombok.Data;
 import java.time.LocalDateTime;

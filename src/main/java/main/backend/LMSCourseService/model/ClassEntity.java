@@ -2,8 +2,6 @@ package main.backend.LMSCourseService.model;
 
 import jakarta.persistence.*;
 import lombok.*;
-
-// Import đúng User từ gói của nhóm trưởng
 import main.backend.auth.entity.User;
 
 @Entity
@@ -11,7 +9,7 @@ import main.backend.auth.entity.User;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder // Thêm Builder để sau này tạo dữ liệu mẫu cho dễ
+@Builder
 public class ClassEntity {
     @Id
     @Column(name = "class_id")
@@ -19,19 +17,27 @@ public class ClassEntity {
 
     @ManyToOne
     @JoinColumn(name = "course_id")
-    private CourseEntity course; // Một lớp thuộc về một khóa học
+    private CourseEntity course;
 
     @Column(name = "class_code")
     private String classCode;
 
     @ManyToOne
     @JoinColumn(name = "teacher_id")
-    private User teacher; // Bây giờ đã nhận diện được User
+    private User teacher;
+
     @Column(name = "start_date")
-    private String startDate;
+    private java.time.LocalDate startDate;
 
     @Column(name = "end_date")
-    private String endDate;
+    private java.time.LocalDate endDate;
+
+    @Enumerated(EnumType.STRING)
+    private main.backend.constant.ClassStatus status;
+
+    @Column(name = "created_at", insertable = false, updatable = false)
+    private java.time.LocalDateTime createdAt;
+
     @Column(name = "total_quizzes")
     private Integer totalQuizzes;
 }

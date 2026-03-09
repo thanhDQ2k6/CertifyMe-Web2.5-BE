@@ -17,7 +17,7 @@ public class Quiz {
 
     @ManyToOne
     @JoinColumn(name = "class_id", nullable = false)
-    private ClassEntity classEntity; // Đổi từ Course thành ClassEntity
+    private ClassEntity classEntity;
 
     @Column(nullable = false)
     private String title;
@@ -33,10 +33,15 @@ public class Quiz {
 
     @Enumerated(EnumType.STRING)
     private QuizStatus status = QuizStatus.DRAFT;
-    @Column(name = "max_score")
-    private Double maxScore;
+
     public enum QuizStatus { DRAFT, PUBLISHED, CLOSED }
-    // Trong main.backend.lms.LMSQuizService.model.Quiz
+
+    @Column(name = "max_attempts")
+    private Integer maxAttempts;
+
     @OneToMany(mappedBy = "quiz", cascade = CascadeType.ALL)
-    private List<Question> questions; // Danh sách câu hỏi PHẢI nằm ở đây
+    private List<Question> questions;
+
+    @Column(name = "created_at", insertable = false, updatable = false)
+    private java.time.LocalDateTime createdAt;
 }

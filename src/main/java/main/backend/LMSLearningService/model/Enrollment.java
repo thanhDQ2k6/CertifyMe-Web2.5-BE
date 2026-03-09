@@ -22,7 +22,7 @@ public class Enrollment {
 
     @ManyToOne
     @JoinColumn(name = "student_id", nullable = false)
-    private User student; // Giờ đã hết báo đỏ
+    private User student;
 
     @ManyToOne
     @JoinColumn(name = "class_id", nullable = false)
@@ -41,17 +41,6 @@ public class Enrollment {
     @Column(name = "status")
     private EnrollmentStatus status = EnrollmentStatus.LEARNING;
 
-    @Column(name = "cert_hash")
-    private String certHash;
-
-    @Column(name = "cert_block")
-    private String certBlock;
-
-    @Column(name = "cert_tx_hash")
-    private String certTxHash;
-
-    @Column(name = "cert_contract")
-    private String certContract;
     public enum EnrollmentStatus {
         LEARNING, PASSED, FAILED, DROPPED
     }
