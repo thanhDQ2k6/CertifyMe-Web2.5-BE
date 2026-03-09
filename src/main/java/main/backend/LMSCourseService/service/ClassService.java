@@ -8,10 +8,10 @@ import main.backend.LMSCourseService.model.ClassEntity;
 import main.backend.LMSCourseService.model.CourseEntity;
 import main.backend.LMSCourseService.repository.ClassRepository;
 import main.backend.auth.entity.User;
+import main.backend.constant.ClassStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -50,9 +50,9 @@ public class ClassService {
         newClass.setClassCode(dto.getClassCode());
         newClass.setTotalQuizzes(0);
 
-        // FIX LỖI DATE: Chuyển LocalDate từ DTO sang String cho Entity
-        if (dto.getStartDate() != null) newClass.setStartDate(dto.getStartDate().toString());
-        if (dto.getEndDate() != null) newClass.setEndDate(dto.getEndDate().toString());
+        if (dto.getStartDate() != null) newClass.setStartDate(dto.getStartDate());
+        if (dto.getEndDate() != null) newClass.setEndDate(dto.getEndDate());
+        newClass.setStatus(ClassStatus.ACTIVE);
 
         if (dto.getCourseId() != null) {
             CourseEntity course = new CourseEntity();
@@ -73,10 +73,8 @@ public class ClassService {
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy lớp học"));
 
         if(dto.getClassCode() != null) existingClass.setClassCode(dto.getClassCode());
-
-        // FIX LỖI DATE: Chuyển LocalDate sang String
-        if(dto.getStartDate() != null) existingClass.setStartDate(dto.getStartDate().toString());
-        if(dto.getEndDate() != null) existingClass.setEndDate(dto.getEndDate().toString());
+        if(dto.getStartDate() != null) existingClass.setStartDate(dto.getStartDate());
+        if(dto.getEndDate() != null) existingClass.setEndDate(dto.getEndDate());
 
         return mapToDTO(classRepository.save(existingClass));
     }
@@ -86,8 +84,7 @@ public class ClassService {
         dto.setClassId(clazz.getClassId());
         dto.setClassCode(clazz.getClassCode());
 
-        // Hardcode status vì DB của ông bạn không có cột này
-        dto.setStatus("active");
+        dto.setStatus(clazz.getStatus() != null ? clazz.getStatus().name().toLowerCase() : "active");
 
         if (clazz.getCourse() != null) {
             dto.setCourseId(clazz.getCourse().getCourseId());
@@ -97,14 +94,8 @@ public class ClassService {
 
         dto.setStudentCount(30);
         dto.setQuizCount(clazz.getTotalQuizzes() != null ? clazz.getTotalQuizzes() : 0);
-
-        // FIX LỖI DATE: Dịch ngược từ String trong DB ra LocalDate cho DTO
-        if (clazz.getStartDate() != null && !clazz.getStartDate().isEmpty()) {
-            dto.setStartDate(LocalDate.parse(clazz.getStartDate()));
-        }
-        if (clazz.getEndDate() != null && !clazz.getEndDate().isEmpty()) {
-            dto.setEndDate(LocalDate.parse(clazz.getEndDate()));
-        }
+        dto.setStartDate(clazz.getStartDate());
+        dto.setEndDate(clazz.getEndDate());
 
         return dto;
     }

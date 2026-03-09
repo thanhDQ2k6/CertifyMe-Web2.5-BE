@@ -9,10 +9,12 @@ import main.backend.LMSCourseService.repository.CourseRepository;
 import main.backend.LMSLearningService.repository.EnrollmentRepository;
 import main.backend.LMSQuizService.repository.QuizAttemptRepository;
 import main.backend.LMSQuizService.repository.QuizRepository;
+import main.backend.LMSCertificateBlockchainService.repository.CertificateRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.stream.Collectors;
+
 @Service
 @RequiredArgsConstructor
 public class CourseService {
@@ -20,10 +22,10 @@ public class CourseService {
     private final EnrollmentRepository enrollmentRepository;
     private final QuizRepository quizRepository;
     private final QuizAttemptRepository quizAttemptRepository;
+    private final CertificateRepository certificateRepository;
 
     public CourseDetailResponse getCourseDetail(String courseId, String studentId) {
-        // 1. Lấy Enrollment (Nếu không có trả về lỗi luôn)
-        Enrollment enrollment = enrollmentRepository.findByStudentIdAndCourseId(studentId, courseId)
+        Enrollment enrollment = enrollmentRepository.findByStudent_UserIdAndClassEntity_ClassId(studentId, courseId)
                 .orElseThrow(() -> new RuntimeException("Bạn chưa tham gia khóa học này"));
 
         var clazz = enrollment.getClassEntity();
@@ -31,41 +33,40 @@ public class CourseService {
         var teacher = clazz.getTeacher();
         var student = enrollment.getStudent();
 
-        // 2. Lấy danh sách Quiz từ DB
-        List<Quiz> allQuizzes = quizRepository.findByClassEntity(clazz);
+        List<Quiz> allQuizzes = quizRepository.findAll().stream()
+                .filter(q -> q.getClassEntity().getClassId().equals(clazz.getClassId()))
+                .collect(Collectors.toList());
 
         List<CourseDetailResponse.QuizDTO> quizDTOs = allQuizzes.stream().map(quiz -> {
-            var attempt = quizAttemptRepository.findTopByStudentIdAndQuizIdOrderByScoreDesc(studentId, quiz.getQuizId())
+            var attempt = quizAttemptRepository.findByStudent_UserId(studentId).stream()
+                    .filter(a -> a.getQuiz().getQuizId().equals(quiz.getQuizId()))
+                    .max((a1, a2) -> Double.compare(a1.getScore(), a2.getScore()))
                     .orElse(null);
 
-            // Logic status lấy từ DB hoặc trạng thái bài làm
             String status = determineQuizStatus(attempt, quiz);
 
             return CourseDetailResponse.QuizDTO.builder()
                     .id(quiz.getQuizId())
                     .name(quiz.getTitle())
                     .score(attempt != null ? attempt.getScore() : null)
-                    .maxScore(quiz.getMaxScore()) // Lấy từ cột max_score trong DB
+                    .maxScore(10.0) // FIX: Cố định 10 điểm vì DB không lưu maxScore
                     .status(status)
                     .build();
         }).collect(Collectors.toList());
 
-        // 3. Tính toán dựa trên dữ liệu thật
         int totalQuizzes = quizDTOs.size();
         int completedQuizzes = (int) quizDTOs.stream().filter(q -> "completed".equals(q.getStatus())).count();
         int progress = (totalQuizzes > 0) ? (completedQuizzes * 100 / totalQuizzes) : 0;
 
-        // Trạng thái hoàn thành lấy từ cột status của enrollment trong DB
         boolean isCompleted = "PASSED".equalsIgnoreCase(enrollment.getStatus().name());
 
-        // 4. Build Response (Tất cả lấy từ Getter)
         var response = CourseDetailResponse.builder()
-                .courseIcon(course.getCourseIcon())
+                .courseIcon(course.getCourseId())
                 .courseName(course.getCourseName())
                 .courseCode(clazz.getClassCode())
                 .teacherName(teacher != null ? teacher.getFullName() : null)
-                .startDate(clazz.getStartDate()) // Lấy từ DB (kiểu String hoặc Date)
-                .endDate(clazz.getEndDate())     // Lấy từ DB
+                .startDate(clazz.getStartDate() != null ? clazz.getStartDate().toString() : null)
+                .endDate(clazz.getEndDate() != null ? clazz.getEndDate().toString() : null)
                 .progress(progress)
                 .totalQuizzes(totalQuizzes)
                 .completedQuizzes(completedQuizzes)
@@ -75,26 +76,29 @@ public class CourseService {
                 .quizzes(quizDTOs)
                 .build();
 
-        // 5. Thêm Certificate lấy từ các cột blockchain trong bảng enrollment
-        if (isCompleted && enrollment.getCertHash() != null) {
-            response.setCertificate(CourseDetailResponse.CertificateDTO.builder()
-                    .verificationHash(enrollment.getCertHash())
-                    .blockchainInfo(java.util.Map.of(
-                            "hash", enrollment.getCertHash(),
-                            "block", enrollment.getCertBlock(),    // Cột mới trong DB
-                            "txHash", enrollment.getCertTxHash(), // Cột mới trong DB
-                            "contract", enrollment.getCertContract() // Cột mới trong DB
-                    ))
-                    .build());
+        // FIX: Lấy chứng chỉ trực tiếp từ bảng Certificate thay vì Enrollment
+        if (isCompleted) {
+            certificateRepository.findByStudent_UserId(studentId).stream()
+                    .filter(c -> c.getClassEntity().getClassId().equals(clazz.getClassId()))
+                    .findFirst()
+                    .ifPresent(cert -> {
+                        response.setCertificate(CourseDetailResponse.CertificateDTO.builder()
+                                .verificationHash(cert.getCertificateHash())
+                                .blockchainInfo(java.util.Map.of(
+                                        "hash", cert.getCertificateHash(),
+                                        "block", cert.getBlockNumber() != null ? cert.getBlockNumber().toString() : "",
+                                        "txHash", cert.getTransactionHash() != null ? cert.getTransactionHash() : "",
+                                        "contract", cert.getContractAddress() != null ? cert.getContractAddress() : ""
+                                ))
+                                .build());
+                    });
         }
 
         return response;
     }
 
-    // Hàm phụ để xử lý logic status, không viết cứng trong stream
     private String determineQuizStatus(QuizAttempt attempt, Quiz quiz) {
         if (attempt != null) return "completed";
-        // Có thể thêm logic: nếu quiz.getIsLocked() return "locked" else "pending"
         return "pending";
     }
 }

@@ -10,7 +10,7 @@ public class CourseResponse {
     private String courseId;
     private String courseCode;
     private String courseName;
-    private String courseIcon; // THÊM DÒNG NÀY VÀO ĐÂY
+    private String courseIcon;
     private String teacherName;
     private Integer progress;
     private Integer totalQuizzes;

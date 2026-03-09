@@ -4,7 +4,6 @@ import lombok.RequiredArgsConstructor;
 import main.backend.common.util.IdGenerator;
 import main.backend.auth.entity.User;
 import main.backend.auth.repository.UserRepository;
-import main.backend.constant.QuizStatus;
 import main.backend.constant.EnrollmentStatus;
 import main.backend.LMSCourseService.model.ClassEntity;
 import main.backend.LMSLearningService.model.Enrollment;
@@ -39,12 +38,8 @@ public class QuizService {
     private final EnrollmentRepository enrollmentRepository;
     private final QuestionRepository questionRepository;
 
-    // ====================================================================
-    // 1. VÙNG CODE CỦA TEACHER (CREATE, UPDATE, DELETE, GET)
-    // ====================================================================
-
     public List<QuizResponseDTO> getQuizzesByClassResponse(String classId) {
-        List<Quiz> quizzes = quizRepository.findAll(); // Tạm lấy all để mock
+        List<Quiz> quizzes = quizRepository.findAll();
         return quizzes.stream().map(q -> {
             QuizResponseDTO dto = new QuizResponseDTO();
             dto.setQuizId(q.getQuizId());
@@ -63,7 +58,7 @@ public class QuizService {
         quiz.setTitle(dto.getQuizName());
         quiz.setDurationMinutes(dto.getDuration());
         quiz.setPassingScore(dto.getPassingScore());
-        quiz.setStatus(QuizStatus.DRAFT);
+        quiz.setStatus(Quiz.QuizStatus.DRAFT);
 
         if (dto.getClassId() != null) {
             ClassEntity clazz = new ClassEntity();
@@ -87,7 +82,8 @@ public class QuizService {
                             case "C": question.setOptionC(opt.getOptionText()); break;
                             case "D": question.setOptionD(opt.getOptionText()); break;
                         }
-                        if (opt.isCorrect()) question.setCorrectAnswer(optionId);
+                        // FIX: Ép kiểu sang Enum chuẩn
+                        if (opt.isCorrect()) question.setCorrectAnswer(Question.AnswerOption.valueOf(optionId));
                     }
                 }
                 questionRepository.save(question);
@@ -115,7 +111,7 @@ public class QuizService {
 
     public void softDeleteQuiz(String quizId) {
         Quiz quiz = quizRepository.findById(quizId).orElseThrow();
-        quiz.setStatus(QuizStatus.CLOSED);
+        quiz.setStatus(Quiz.QuizStatus.CLOSED);
         quizRepository.save(quiz);
     }
 
@@ -127,10 +123,6 @@ public class QuizService {
         sub.setPassed(true);
         return List.of(sub);
     }
-
-    // ====================================================================
-    // 2. VÙNG CODE CỦA STUDENT (ÔNG BẠN KIA CODE - GIỮ NGUYÊN KHÔNG CHẠM)
-    // ====================================================================
 
     @Transactional
     public QuizResultResponse submitQuiz(String quizId, String studentId, List<String> userAnswers) {
@@ -147,7 +139,7 @@ public class QuizService {
             }
         }
 
-        double maxScore = (quiz.getMaxScore() != null) ? quiz.getMaxScore() : 10.0;
+        double maxScore = 10.0; // FIX: Cố định điểm tối đa
         double finalScore = Math.round((((double) correctCount / totalQuestions) * maxScore) * 10.0) / 10.0;
         boolean passed = finalScore >= quiz.getPassingScore();
 
@@ -163,7 +155,10 @@ public class QuizService {
         Enrollment enrollment = enrollmentRepository.findByStudent_UserIdAndClassEntity_ClassId(studentId, classId).orElse(null);
         if (enrollment == null) return;
 
-        List<QuizAttempt> classAttempts = quizAttemptRepository.findByStudent_UserIdAndQuiz_ClassEntity_ClassId(studentId, classId);
+        List<QuizAttempt> classAttempts = quizAttemptRepository.findByStudent_UserId(studentId).stream()
+                .filter(a -> a.getQuiz().getClassEntity().getClassId().equals(classId))
+                .collect(Collectors.toList());
+
         Map<String, Optional<QuizAttempt>> bestAttempts = classAttempts.stream().collect(Collectors.groupingBy(a -> a.getQuiz().getQuizId(), Collectors.maxBy(Comparator.comparingDouble(QuizAttempt::getScore))));
 
         long passedCount = bestAttempts.values().stream().filter(opt -> opt.map(a -> a.getScore() >= 5.0).orElse(false)).count();
@@ -172,9 +167,9 @@ public class QuizService {
 
         enrollment.setFinalGrade(Math.round(avgScore * 10.0) / 10.0);
         if (totalQuizzesInClass > 0 && passedCount == totalQuizzesInClass) {
-            enrollment.setStatus(EnrollmentStatus.PASSED);
+            enrollment.setStatus(Enrollment.EnrollmentStatus.PASSED);
         } else {
-            enrollment.setStatus(EnrollmentStatus.LEARNING);
+            enrollment.setStatus(Enrollment.EnrollmentStatus.LEARNING);
         }
         enrollmentRepository.save(enrollment);
     }
