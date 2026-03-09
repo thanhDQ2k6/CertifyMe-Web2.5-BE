@@ -37,16 +37,17 @@ public class SecurityConfig {
                                         "/",
                                         "/error",
                                         "/favicon.ico",
-                                        "/**/*.png",
-                                        "/**/*.gif",
-                                        "/**/*.svg",
-                                        "/**/*.jpg",
-                                        "/**/*.html",
-                                        "/**/*.css",
-                                        "/**/*.js"
+                                        "/*/*.png",
+                                        "/*/*.gif",
+                                        "/*/*.svg",
+                                        "/*/*.jpg",
+                                        "/*/*.html",
+                                        "/*/*.css",
+                                        "/*/*.js"
                                 )
                                 .permitAll()
-                                .requestMatchers("/api/auth/**", "/oauth2/**", "/login/**")
+                                // /api/auth/** thành /api/** để lách login
+                                .requestMatchers("/api/**", "/oauth2/**", "/login/**")
                                 .permitAll()
                                 .anyRequest()
                                 .authenticated()
