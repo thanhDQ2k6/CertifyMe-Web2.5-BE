@@ -13,25 +13,20 @@ public class QuizAttempt {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "attempt_id")
-    private Long attemptId; // MySQL: bigint
-
+    private Long attemptId;
     @Column(name = "score")
-    private Double score; // MySQL: double
-
+    private Double score;
     @Column(name = "is_passed")
-    private Boolean isPassed; // MySQL: tinyint(1)
-
+    private Boolean isPassed;
     @Column(name = "is_best_attempt")
-    private Boolean isBestAttempt; // MySQL: tinyint(1)
-
+    private Boolean isBestAttempt;
+    @Column(name = "started_at")
+    private java.time.LocalDateTime startedAt;
     @Column(name = "submitted_at")
-    private java.time.LocalDateTime submittedAt; // MySQL: datetime
-
-    // Khai báo mối quan hệ để JPA biết JOIN vào bảng nào
+    private java.time.LocalDateTime submittedAt;
     @ManyToOne
     @JoinColumn(name = "student_id")
     private User student;
-
     @ManyToOne
     @JoinColumn(name = "quiz_id")
     private Quiz quiz;

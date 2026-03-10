@@ -1,5 +1,5 @@
--- NHỚ DROP DATABASE LẠI NẾU CÓ ĐỔI DỮ LIỆU MỚI --
-# DROP DATABASE lms_database;
+
+# drop database lms_database;
 -- ==============================================================
 -- 1. NHÓM QUẢN TRỊ NGƯỜI DÙNG (AUTH & USERS)
 -- ==============================================================

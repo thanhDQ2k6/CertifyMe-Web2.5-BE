@@ -24,7 +24,6 @@ public class CertificateService {
     private final CourseRepository courseRepository;
 
     public boolean canIssueCertificate(String studentId, String courseId) {
-        // Tạm hiểu courseId ở đây là classId theo logic cũ
         List<ClassEntity> allInfoClasses = classRepository.findAll().stream()
                 .filter(c -> c.getCourse() != null && c.getCourse().getCourseId().equals(courseId))
                 .collect(Collectors.toList());
@@ -42,10 +41,8 @@ public class CertificateService {
 
     public List<CertificateResponse> getCertificatesByStudentId(String studentId) {
         List<Certificate> certificates = certificateRepository.findByStudent_UserId(studentId);
-
         return certificates.stream()
                 .map(cert -> CertificateResponse.builder()
-                        // FIX: Gọi qua getClassEntity() để lấy Course
                         .courseName(cert.getClassEntity() != null && cert.getClassEntity().getCourse() != null ? cert.getClassEntity().getCourse().getCourseName() : "N/A")
                         .courseCode(cert.getClassEntity() != null ? cert.getClassEntity().getClassCode() : "N/A")
                         .verificationHash(cert.getCertificateHash())

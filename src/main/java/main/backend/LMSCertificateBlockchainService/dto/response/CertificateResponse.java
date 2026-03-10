@@ -15,17 +15,17 @@ public class CertificateResponse {
     private String verificationHash;
     private String status;
 
-//    // THÊM DUY NHẤT CÁI NÀY ĐỂ TRẢ VỀ JSON LỒNG NHAU
-//    private BlockchainInfo blockchainInfo;
-//
-//    @Data
-//    @Builder
-//    @NoArgsConstructor
-//    @AllArgsConstructor
-//    public static class BlockchainInfo {
-//        private String hash;
-//        private String block;
-//        private String txHash;
-//        private String contract;
-//    }
+    // THÊM DUY NHẤT CÁI NÀY ĐỂ TRẢ VỀ JSON LỒNG NHAU
+    private BlockchainInfo blockchainInfo;
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class BlockchainInfo {
+        private String hash;
+        private String block;
+        private String txHash;
+        private String contract;
+    }
 }

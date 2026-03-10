@@ -83,7 +83,6 @@ public class QuizService {
                             case "C": question.setOptionC(opt.getOptionText()); break;
                             case "D": question.setOptionD(opt.getOptionText()); break;
                         }
-                        // FIX: Ép kiểu sang Enum chuẩn
                         if (opt.isCorrect()) question.setCorrectAnswer(Question.AnswerOption.valueOf(optionId));
                     }
                 }
@@ -174,10 +173,13 @@ public class QuizService {
                         (existing, replacement) -> replacement
                 ));
 
+
         for (Question q : questions) {
-            String userSelected = userAnswersMap.get(q.getQuestionId());
+            String questionIdStr = String.valueOf(q.getQuestionId());
+            String userSelected = userAnswersMap.get(questionIdStr);
+
             if (userSelected != null && q.getCorrectAnswer() != null) {
-                if (q.getCorrectAnswer().toString().equalsIgnoreCase(userSelected.trim())) {
+                if (q.getCorrectAnswer().name().equalsIgnoreCase(userSelected.trim())) {
                     correctCount++;
                 }
             }

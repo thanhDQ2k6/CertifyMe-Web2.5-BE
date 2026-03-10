@@ -21,7 +21,6 @@ public class StudentController {
     @GetMapping("/{studentId}/courses")
     // @PreAuthorize("hasRole('STUDENT')") // Khi nào bật bảo mật thì mở cái này ra
     public ApiResponse<List<CourseResponse>> getCoursesById(@PathVariable String studentId) {
-
         List<CourseResponse> data = studentService.getStudentDashboard(studentId);
         return ApiResponse.success("Lấy danh sách khóa học thành công", data);
     }
