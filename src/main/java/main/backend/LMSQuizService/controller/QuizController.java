@@ -8,6 +8,7 @@ import main.backend.LMSCourseService.dto.response.QuizResponseDTO;
 import main.backend.LMSCourseService.dto.response.QuizSubmissionResponseDTO;
 import main.backend.LMSQuizService.service.QuizService;
 import main.backend.LMSLearningService.service.StudentService;
+import main.backend.lms.dto.request.QuizSubmissionRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -23,11 +24,8 @@ public class QuizController {
     private final StudentService studentService;
 
     @PostMapping("/quizzes/{quizId}/submit")
-    public ResponseEntity<QuizResultResponse> submitQuiz(
-            @PathVariable String quizId,
-            @RequestBody List<String> answers) {
-        String studentId = "u1";
-        return ResponseEntity.ok(quizService.submitQuiz(quizId, studentId, answers));
+    public ResponseEntity<?> submit(@PathVariable String quizId, @RequestBody QuizSubmissionRequest request) {
+        return ResponseEntity.ok(ApiResponse.success("Nộp bài thành công", quizService.submitQuiz(quizId, request)));
     }
 
     @GetMapping("/classes/{classId}/quizzes")
@@ -55,5 +53,11 @@ public class QuizController {
     @GetMapping("/quizzes/{quizId}/submissions")
     public ResponseEntity<ApiResponse<List<QuizSubmissionResponseDTO>>> getQuizSubmissions(@PathVariable String quizId) {
         return ResponseEntity.ok(ApiResponse.success("Success", quizService.getQuizSubmissions(quizId)));
+    }
+
+    @GetMapping("/quizzes/{quizId}")
+    public ResponseEntity<ApiResponse<QuizResponseDTO>> getQuizDetail(@PathVariable String quizId) {
+        QuizResponseDTO quizDetail = quizService.getQuizDetail(quizId);
+        return ResponseEntity.ok(ApiResponse.success("Success", quizDetail));
     }
 }

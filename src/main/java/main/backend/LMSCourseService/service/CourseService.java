@@ -25,7 +25,10 @@ public class CourseService {
     private final CertificateRepository certificateRepository;
 
     public CourseDetailResponse getCourseDetail(String courseId, String studentId) {
-        Enrollment enrollment = enrollmentRepository.findByStudent_UserIdAndClassEntity_ClassId(studentId, courseId)
+
+        Enrollment enrollment = enrollmentRepository.findByStudent_UserId(studentId).stream()
+                .filter(e -> e.getClassEntity().getCourse() != null && e.getClassEntity().getCourse().getCourseId().equals(courseId))
+                .findFirst()
                 .orElseThrow(() -> new RuntimeException("Bạn chưa tham gia khóa học này"));
 
         var clazz = enrollment.getClassEntity();
@@ -49,7 +52,7 @@ public class CourseService {
                     .id(quiz.getQuizId())
                     .name(quiz.getTitle())
                     .score(attempt != null ? attempt.getScore() : null)
-                    .maxScore(10.0) // FIX: Cố định 10 điểm vì DB không lưu maxScore
+                    .maxScore(10.0) // Cố định 10 điểm vì DB không lưu maxScore
                     .status(status)
                     .build();
         }).collect(Collectors.toList());
@@ -61,7 +64,6 @@ public class CourseService {
         boolean isCompleted = "PASSED".equalsIgnoreCase(enrollment.getStatus().name());
 
         var response = CourseDetailResponse.builder()
-                .courseIcon(course.getCourseId())
                 .courseName(course.getCourseName())
                 .courseCode(clazz.getClassCode())
                 .teacherName(teacher != null ? teacher.getFullName() : null)
@@ -76,7 +78,7 @@ public class CourseService {
                 .quizzes(quizDTOs)
                 .build();
 
-        // FIX: Lấy chứng chỉ trực tiếp từ bảng Certificate thay vì Enrollment
+        // Lấy chứng chỉ trực tiếp từ bảng Certificate
         if (isCompleted) {
             certificateRepository.findByStudent_UserId(studentId).stream()
                     .filter(c -> c.getClassEntity().getClassId().equals(clazz.getClassId()))

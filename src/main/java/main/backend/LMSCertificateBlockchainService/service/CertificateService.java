@@ -48,8 +48,8 @@ public class CertificateService {
                         // FIX: Gọi qua getClassEntity() để lấy Course
                         .courseName(cert.getClassEntity() != null && cert.getClassEntity().getCourse() != null ? cert.getClassEntity().getCourse().getCourseName() : "N/A")
                         .courseCode(cert.getClassEntity() != null ? cert.getClassEntity().getClassCode() : "N/A")
-                        .certHash(cert.getCertificateHash())
-                        .certDate(cert.getIssueDate() != null ? cert.getIssueDate().toString() : "N/A")
+                        .verificationHash(cert.getCertificateHash())
+                        .issuedAt(cert.getIssueDate() != null ? cert.getIssueDate().toString() : "N/A")
                         .build())
                 .collect(Collectors.toList());
     }

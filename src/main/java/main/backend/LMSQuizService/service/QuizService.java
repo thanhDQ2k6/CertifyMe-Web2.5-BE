@@ -18,6 +18,7 @@ import main.backend.LMSQuizService.model.QuizAttempt;
 import main.backend.LMSQuizService.repository.QuestionRepository;
 import main.backend.LMSQuizService.repository.QuizAttemptRepository;
 import main.backend.LMSQuizService.repository.QuizRepository;
+import main.backend.lms.dto.request.QuizSubmissionRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -97,6 +98,34 @@ public class QuizService {
         return response;
     }
 
+    public QuizResponseDTO getQuizDetail(String quizId) {
+        Quiz quiz = quizRepository.findById(quizId)
+                .orElseThrow(() -> new RuntimeException("Quiz không tồn tại với ID: " + quizId));
+
+        QuizResponseDTO dto = new QuizResponseDTO();
+        dto.setQuizId(quiz.getQuizId());
+        dto.setQuizName(quiz.getTitle());
+        dto.setDuration(quiz.getDurationMinutes());
+        dto.setPassingScore(quiz.getPassingScore());
+        dto.setStatus(quiz.getStatus() != null ? quiz.getStatus().name().toLowerCase() : "published");
+
+        if (quiz.getQuestions() != null) {
+            List<QuizResponseDTO.QuestionResponseDTO> questionDTOs = quiz.getQuestions().stream()
+                    .map(q -> {
+                        QuizResponseDTO.QuestionResponseDTO qDto = new QuizResponseDTO.QuestionResponseDTO();
+                        qDto.setQuestionId(q.getQuestionId());
+                        qDto.setQuestionText(q.getQuestionText());
+                        qDto.setOptionA(q.getOptionA());
+                        qDto.setOptionB(q.getOptionB());
+                        qDto.setOptionC(q.getOptionC());
+                        qDto.setOptionD(q.getOptionD());
+                        return qDto;
+                    }).collect(Collectors.toList());
+            dto.setQuestions(questionDTOs);
+        }
+
+        return dto;
+    }
     public QuizResponseDTO updateQuiz(String quizId, QuizRequestDTO dto) {
         Quiz existingQuiz = quizRepository.findById(quizId).orElseThrow();
         existingQuiz.setTitle(dto.getQuizName());
@@ -125,30 +154,63 @@ public class QuizService {
     }
 
     @Transactional
-    public QuizResultResponse submitQuiz(String quizId, String studentId, List<String> userAnswers) {
-        Quiz quiz = quizRepository.findById(quizId).orElseThrow(() -> new RuntimeException("Quiz không tồn tại"));
+    public QuizResultResponse submitQuiz(String quizId, QuizSubmissionRequest request) {
+        String studentId = request.getStudentId();
+
+        Quiz quiz = quizRepository.findById(quizId)
+                .orElseThrow(() -> new RuntimeException("Quiz không tồn tại"));
+
         List<Question> questions = quiz.getQuestions();
-        if (questions == null || questions.isEmpty()) throw new RuntimeException("Bài thi này chưa có câu hỏi nào!");
+        if (questions == null || questions.isEmpty())
+            throw new RuntimeException("Bài thi này chưa có câu hỏi nào!");
 
         int correctCount = 0;
         int totalQuestions = questions.size();
-        for (int i = 0; i < totalQuestions; i++) {
-            if (i < userAnswers.size()) {
-                String correctAns = questions.get(i).getCorrectAnswer().toString();
-                if (correctAns.equalsIgnoreCase(userAnswers.get(i))) correctCount++;
+
+        Map<String, String> userAnswersMap = request.getAnswers().stream()
+                .collect(Collectors.toMap(
+                        main.backend.lms.dto.request.QuizSubmissionRequest.AnswerRequest::getQuestionId,
+                        main.backend.lms.dto.request.QuizSubmissionRequest.AnswerRequest::getSelectedOption,
+                        (existing, replacement) -> replacement
+                ));
+
+        for (Question q : questions) {
+            String userSelected = userAnswersMap.get(q.getQuestionId());
+            if (userSelected != null && q.getCorrectAnswer() != null) {
+                if (q.getCorrectAnswer().toString().equalsIgnoreCase(userSelected.trim())) {
+                    correctCount++;
+                }
             }
         }
 
-        double maxScore = 10.0; // FIX: Cố định điểm tối đa
+
+        double maxScore = 10.0;
         double finalScore = Math.round((((double) correctCount / totalQuestions) * maxScore) * 10.0) / 10.0;
-        boolean passed = finalScore >= quiz.getPassingScore();
+        boolean passed = finalScore >= (quiz.getPassingScore() != null ? quiz.getPassingScore() : 5.0);
 
-        User student = userRepository.findById(studentId).orElseThrow();
-        QuizAttempt attempt = QuizAttempt.builder().student(student).quiz(quiz).score(finalScore).isPassed(passed).submittedAt(LocalDateTime.now()).build();
+        User student = userRepository.findById(studentId)
+                .orElseThrow(() -> new RuntimeException("Sinh viên không tồn tại"));
+
+        QuizAttempt attempt = QuizAttempt.builder()
+                .student(student)
+                .quiz(quiz)
+                .score(finalScore)
+                .isPassed(passed)
+                .submittedAt(LocalDateTime.now())
+                .build();
+
         quizAttemptRepository.save(attempt);
-        updateStudentProgress(studentId, quiz.getClassEntity().getClassId());
 
-        return QuizResultResponse.builder().score(finalScore).maxScore(maxScore).status(passed ? "PASSED" : "FAILED").submittedAt(attempt.getSubmittedAt()).build();
+        if (quiz.getClassEntity() != null) {
+            updateStudentProgress(studentId, quiz.getClassEntity().getClassId());
+        }
+
+        return QuizResultResponse.builder()
+                .score(finalScore)
+                .maxScore(maxScore)
+                .status(passed ? "PASSED" : "FAILED")
+                .submittedAt(attempt.getSubmittedAt())
+                .build();
     }
 
     private void updateStudentProgress(String studentId, String classId) {

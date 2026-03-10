@@ -82,8 +82,8 @@ public class StudentService {
                 .map(c -> CertificateResponse.builder()
                         .courseName(c.getClassEntity() != null && c.getClassEntity().getCourse() != null ? c.getClassEntity().getCourse().getCourseName() : "N/A")
                         .courseCode(c.getClassEntity() != null ? c.getClassEntity().getClassCode() : "N/A")
-                        .certHash(c.getCertificateHash())
-                        .certDate(c.getIssueDate() != null ? c.getIssueDate().toString() : "N/A")
+                        .verificationHash(c.getCertificateHash())
+                        .issuedAt(c.getIssueDate() != null ? c.getIssueDate().toString() : "N/A")
                         .build())
                 .collect(Collectors.toList());
     }
