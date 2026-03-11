@@ -1,5 +1,7 @@
 package main.backend.LMSCourseService.service;
 
+import main.backend.LMSLearningService.model.Enrollment;
+import main.backend.LMSLearningService.repository.EnrollmentRepository;
 import main.backend.common.util.IdGenerator;
 import main.backend.lms.dto.request.ClassRequestDTO;
 import main.backend.LMSCourseService.dto.response.ClassResponseDTO;
@@ -20,7 +22,8 @@ public class ClassService {
 
     @Autowired
     private ClassRepository classRepository;
-
+    @Autowired
+    private main.backend.LMSLearningService.repository.EnrollmentRepository enrollmentRepository;
     public List<ClassResponseDTO> getTeacherClasses(String teacherId) {
         List<ClassEntity> classes = classRepository.findAll();
         return classes.stream().map(this::mapToDTO).collect(Collectors.toList());
@@ -32,16 +35,22 @@ public class ClassService {
         return mapToDTO(clazz);
     }
 
-    public List<StudentResponseDTO> getStudentsInClass(String classId) {
-        StudentResponseDTO s1 = new StudentResponseDTO();
-        s1.setStudentId("s1");
-        s1.setFullName("Nguyễn Văn An");
-        s1.setEmail("annv@fpt.edu.vn");
-        s1.setCompletedQuizzes(5);
-        s1.setTotalQuizzes(5);
-        s1.setAverageScore(8.5);
-        s1.setStatus("passed");
-        return List.of(s1);
+    public List<StudentResponseDTO> getStudentsInClass(String classId, String status, String sort, String order) {
+        List<Enrollment> enrollments = enrollmentRepository.findByClassEntity_ClassId(classId);
+
+        return enrollments.stream().map(e -> {
+            StudentResponseDTO dto = new StudentResponseDTO();
+            dto.setStudentId(e.getStudent().getUserId());
+            dto.setFullName(e.getStudent().getFullName());
+            dto.setEmail(e.getStudent().getEmail());
+            dto.setAvatarUrl(e.getStudent().getAvatarUrl());
+            dto.setCompletedQuizzes(e.getPassedQuizzes() != null ? e.getPassedQuizzes() : 0);
+            dto.setTotalQuizzes(e.getClassEntity().getTotalQuizzes() != null ? e.getClassEntity().getTotalQuizzes() : 0);
+            dto.setAverageScore(e.getFinalGrade() != null ? e.getFinalGrade() : 0.0);
+            dto.setStatus(e.getStatus() != null ? e.getStatus().name().toLowerCase() : "learning");
+            dto.setEnrolledAt(e.getJoinedAt());
+            return dto;
+        }).collect(Collectors.toList());
     }
 
     public ClassResponseDTO createClass(ClassRequestDTO dto) {

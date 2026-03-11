@@ -12,7 +12,7 @@ import java.util.Optional;
 public interface QuizAttemptRepository extends JpaRepository<QuizAttempt, String> {
 
     List<QuizAttempt> findByStudent_UserIdAndQuiz_ClassEntity_ClassId(String studentId, String classId);
-
+    List<QuizAttempt> findByQuiz_QuizId(String quizId);
     List<QuizAttempt> findByStudent_UserId(String studentId);
 
     @Query("SELECT qa FROM QuizAttempt qa WHERE qa.student.userId = :studentId AND qa.quiz.quizId = :quizId ORDER BY qa.score DESC LIMIT 1")

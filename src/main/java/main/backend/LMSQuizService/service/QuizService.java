@@ -164,12 +164,19 @@ public class QuizService {
     }
 
     public List<QuizSubmissionResponseDTO> getQuizSubmissions(String quizId) {
-        QuizSubmissionResponseDTO sub = new QuizSubmissionResponseDTO();
-        sub.setSubmissionId("sub1");
-        sub.setStudentName("Nguyễn Văn An");
-        sub.setScore(8.5);
-        sub.setPassed(true);
-        return List.of(sub);
+        List<QuizAttempt> attempts = quizAttemptRepository.findByQuiz_QuizId(quizId);
+
+        return attempts.stream().map(a -> {
+            QuizSubmissionResponseDTO sub = new QuizSubmissionResponseDTO();
+            sub.setSubmissionId(String.valueOf(a.getAttemptId()));
+            sub.setStudentId(a.getStudent().getUserId());
+            sub.setStudentName(a.getStudent().getFullName());
+            sub.setStudentEmail(a.getStudent().getEmail());
+            sub.setScore(a.getScore());
+            sub.setPassed(a.getIsPassed());
+            sub.setSubmittedAt(a.getSubmittedAt());
+            return sub;
+        }).collect(Collectors.toList());
     }
 
     @Transactional

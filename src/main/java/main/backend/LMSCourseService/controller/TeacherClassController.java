@@ -30,8 +30,12 @@ public class TeacherClassController {
     }
 
     @GetMapping("/classes/{classId}/students")
-    public ResponseEntity<ApiResponse<List<StudentResponseDTO>>> getStudentsInClass(@PathVariable String classId) {
-        return ResponseEntity.ok(ApiResponse.success("Success", classService.getStudentsInClass(classId)));
+    public ResponseEntity<ApiResponse<List<StudentResponseDTO>>> getStudentsInClass(
+            @PathVariable String classId,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String sort,
+            @RequestParam(required = false) String order) {
+        return ResponseEntity.ok(ApiResponse.success("Success", classService.getStudentsInClass(classId, status, sort, order)));
     }
 
     @PostMapping("/classes")

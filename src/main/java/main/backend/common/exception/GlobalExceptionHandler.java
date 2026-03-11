@@ -1,53 +1,50 @@
 package main.backend.common.exception;
 
-import lombok.extern.slf4j.Slf4j;
 import main.backend.common.dto.ApiResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
-@Slf4j
-@RestControllerAdvice
+@ControllerAdvice
 public class GlobalExceptionHandler {
 
-  @ExceptionHandler(BadCredentialsException.class)
-  public ResponseEntity<ApiResponse<?>> handleBadCredentials(
-    BadCredentialsException ex
-  ) {
-    log.error("Bad credentials: {}", ex.getMessage());
-    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
-      ApiResponse.error("Invalid credentials")
-    );
-  }
+    // 400 Bad Request
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiResponse<Object>> handleBadRequest(IllegalArgumentException ex) {
+        ApiResponse<Object> response = new ApiResponse<>();
+        response.setSuccess(false);
+        response.setError(ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
 
-  @ExceptionHandler(AccessDeniedException.class)
-  public ResponseEntity<ApiResponse<?>> handleAccessDenied(
-    AccessDeniedException ex
-  ) {
-    log.error("Access denied: {}", ex.getMessage());
-    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
-      ApiResponse.error("Access denied")
-    );
-  }
+    // 403 Forbidden (Không có quyền)
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiResponse<Object>> handleAccessDenied(AccessDeniedException ex) {
+        ApiResponse<Object> response = new ApiResponse<>();
+        response.setSuccess(false);
+        response.setError("Access denied");
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+    }
 
-  @ExceptionHandler(RuntimeException.class)
-  public ResponseEntity<ApiResponse<?>> handleRuntimeException(
-    RuntimeException ex
-  ) {
-    log.error("Runtime exception: {}", ex.getMessage(), ex);
-    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
-      ApiResponse.error(ex.getMessage())
-    );
-  }
+    // 404 Not Found
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ApiResponse<Object>> handleNotFound(NoResourceFoundException ex) {
+        ApiResponse<Object> response = new ApiResponse<>();
+        response.setSuccess(false);
+        response.setError("Resource not found");
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    }
 
-  @ExceptionHandler(Exception.class)
-  public ResponseEntity<ApiResponse<?>> handleGenericException(Exception ex) {
-    log.error("Unexpected error: {}", ex.getMessage(), ex);
-    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
-      ApiResponse.error("An unexpected error occurred")
-    );
-  }
+    // 500 Internal Server Error
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ApiResponse<Object>> handleAllExceptions(Exception ex) {
+        ex.printStackTrace();
+        ApiResponse<Object> response = new ApiResponse<>();
+        response.setSuccess(false);
+        response.setError("An unexpected error occurred");
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+    }
 }

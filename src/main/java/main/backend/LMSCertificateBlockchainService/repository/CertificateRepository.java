@@ -11,16 +11,15 @@ import java.util.List;
 
 public interface CertificateRepository extends JpaRepository<Certificate, String> {
 
-    List<Certificate> findByStudent_UserId(String studentId);
-
-
-    long countByStatus(Certificate.CertificateStatus status);
-
     @Query("SELECT COUNT(c) FROM Certificate c WHERE YEAR(c.issueDate) = YEAR(CURRENT_DATE) AND MONTH(c.issueDate) = MONTH(CURRENT_DATE)")
     long countCertificatesThisMonth();
 
     @Query("SELECT COUNT(c) FROM Certificate c WHERE YEAR(c.issueDate) = YEAR(CURRENT_DATE)")
     long countCertificatesThisYear();
+
+    List<Certificate> findByStudent_UserId(String studentId);
+
+    long countByStatus(Certificate.CertificateStatus status);
 
     @Query("SELECT c FROM Certificate c WHERE " +
             "(:status IS NULL OR c.status = :status) AND " +
