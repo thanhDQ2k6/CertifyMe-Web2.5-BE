@@ -1,9 +1,32 @@
 package main.backend.LMSCertificateBlockchainService.repository;
+
 import main.backend.LMSCertificateBlockchainService.model.Certificate;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 
 public interface CertificateRepository extends JpaRepository<Certificate, String> {
+
     List<Certificate> findByStudent_UserId(String studentId);
+
+
+    long countByStatus(Certificate.CertificateStatus status);
+
+    @Query("SELECT COUNT(c) FROM Certificate c WHERE YEAR(c.issueDate) = YEAR(CURRENT_DATE) AND MONTH(c.issueDate) = MONTH(CURRENT_DATE)")
+    long countCertificatesThisMonth();
+
+    @Query("SELECT COUNT(c) FROM Certificate c WHERE YEAR(c.issueDate) = YEAR(CURRENT_DATE)")
+    long countCertificatesThisYear();
+
+    @Query("SELECT c FROM Certificate c WHERE " +
+            "(:status IS NULL OR c.status = :status) AND " +
+            "(:q IS NULL OR c.student.fullName LIKE %:q% " +
+            "OR c.student.email LIKE %:q% " +
+            "OR c.classEntity.classCode LIKE %:q% " +
+            "OR c.certificateHash LIKE %:q%)")
+    Page<Certificate> searchCertificates(@Param("q") String q, @Param("status") Certificate.CertificateStatus status, Pageable pageable);
 }

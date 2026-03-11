@@ -11,7 +11,6 @@ import java.util.Optional;
 @Repository
 public interface QuizAttemptRepository extends JpaRepository<QuizAttempt, String> {
 
-    // Thêm dòng này vào để JPA tự sinh SQL lọc theo StudentId và ClassId
     List<QuizAttempt> findByStudent_UserIdAndQuiz_ClassEntity_ClassId(String studentId, String classId);
 
     List<QuizAttempt> findByStudent_UserId(String studentId);
@@ -21,4 +20,8 @@ public interface QuizAttemptRepository extends JpaRepository<QuizAttempt, String
             @Param("studentId") String studentId,
             @Param("quizId") String quizId
     );
+    @org.springframework.data.jpa.repository.Query("SELECT qa FROM QuizAttempt qa WHERE qa.student.userId = :studentId AND qa.quiz.classEntity.classId = :classId")
+    java.util.List<QuizAttempt> findByStudentAndClass(
+            @org.springframework.data.repository.query.Param("studentId") String studentId,
+            @org.springframework.data.repository.query.Param("classId") String classId);
 }
