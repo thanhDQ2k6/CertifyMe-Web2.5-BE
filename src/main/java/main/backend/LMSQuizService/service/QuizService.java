@@ -74,18 +74,38 @@ public class QuizService {
                 question.setQuiz(savedQuiz);
                 question.setQuestionText(qDto.getQuestionText());
 
+                question.setOptionA("");
+                question.setOptionB("");
+                question.setOptionC("");
+                question.setOptionD("");
+
+                boolean hasCorrectAnswer = false;
+
                 if (qDto.getOptions() != null) {
                     for (QuizRequestDTO.OptionRequestDTO opt : qDto.getOptions()) {
+                        if (opt.getOptionId() == null) continue;
+
                         String optionId = opt.getOptionId().toUpperCase();
+                        String optionText = opt.getOptionText() != null ? opt.getOptionText() : "";
+
                         switch (optionId) {
-                            case "A": question.setOptionA(opt.getOptionText()); break;
-                            case "B": question.setOptionB(opt.getOptionText()); break;
-                            case "C": question.setOptionC(opt.getOptionText()); break;
-                            case "D": question.setOptionD(opt.getOptionText()); break;
+                            case "A": question.setOptionA(optionText); break;
+                            case "B": question.setOptionB(optionText); break;
+                            case "C": question.setOptionC(optionText); break;
+                            case "D": question.setOptionD(optionText); break;
                         }
-                        if (opt.isCorrect()) question.setCorrectAnswer(Question.AnswerOption.valueOf(optionId));
+
+                        if (opt.isCorrect()) {
+                            question.setCorrectAnswer(Question.AnswerOption.valueOf(optionId));
+                            hasCorrectAnswer = true;
+                        }
                     }
                 }
+
+                if (!hasCorrectAnswer) {
+                    question.setCorrectAnswer(Question.AnswerOption.A);
+                }
+
                 questionRepository.save(question);
             }
         }
