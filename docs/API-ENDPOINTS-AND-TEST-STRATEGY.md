@@ -181,55 +181,42 @@ FRONTEND_URL=http://localhost:3000
 
 ### 3.3. Cách nạp biến môi trường khi chạy
 
-Project **không** dùng thư viện `spring-dotenv`, nên file `.env` không tự động được load. Chọn **một trong các cách** sau:
+Project dùng thư viện **`spring-dotenv`** — file `.env` ở thư mục gốc sẽ được **tự động load** khi ứng dụng khởi động.
 
-#### Cách 1: Dùng IDE (IntelliJ IDEA — Khuyến nghị)
+#### Cách hoạt động
 
-1. Cài plugin **"EnvFile"**: `File → Settings → Plugins → Tìm "EnvFile" → Install`
-2. Mở **Run/Debug Configuration** (`Edit Configurations...`)
-3. Chọn cấu hình `BackendApplication`
-4. Tab **"EnvFile"** → Tick **"Enable EnvFile"**
-5. Click **"+"** → Chọn file `.env` ở thư mục gốc project
-6. Click **"Apply" → "OK"**
-7. Chạy bằng nút **Run** như bình thường
+1. Thư viện `spring-dotenv` đã được thêm trong `pom.xml`
+2. Khi Spring Boot khởi động, nó tự đọc file `.env` ở thư mục gốc project
+3. Các biến trong `.env` được inject vào `${VARIABLE_NAME}` trong `application.properties`
 
-#### Cách 2: Dùng IDE (IntelliJ IDEA — không cần plugin)
-
-1. Mở **Run/Debug Configuration** (`Edit Configurations...`)
-2. Tìm mục **"Environment variables"**
-3. Click icon **"..."** bên phải, nhập từng biến:
-   ```
-   GOOGLE_CLIENT_ID=123456789-abcdef.apps.googleusercontent.com;GOOGLE_CLIENT_SECRET=GOCSPX-xxx;JWT_SECRET=my-secret-key;FRONTEND_URL=http://localhost:3000
-   ```
-4. Click **"Apply" → "OK"**
-
-#### Cách 3: Dùng terminal (Linux / macOS / Git Bash)
+#### Chỉ cần 2 bước
 
 ```bash
-# Nạp biến từ .env vào shell, sau đó chạy Spring Boot
-export $(cat .env | grep -v '^#' | xargs) && mvn spring-boot:run
-```
+# 1. Tạo file .env (đã hướng dẫn ở mục 3.2)
+cp .env.example .env
 
-#### Cách 4: Dùng terminal (Windows CMD)
-
-```cmd
-:: Đặt biến thủ công
-set GOOGLE_CLIENT_ID=123456789-abcdef.apps.googleusercontent.com
-set GOOGLE_CLIENT_SECRET=GOCSPX-xxx
-set JWT_SECRET=my-secret-key
-set FRONTEND_URL=http://localhost:3000
+# 2. Chạy ứng dụng — .env tự động được load
 mvn spring-boot:run
 ```
 
-#### Cách 5: Dùng terminal (Windows PowerShell)
+> **Không cần** cài plugin EnvFile, không cần export biến thủ công, không cần cấu hình IDE.
 
-```powershell
-$env:GOOGLE_CLIENT_ID="123456789-abcdef.apps.googleusercontent.com"
-$env:GOOGLE_CLIENT_SECRET="GOCSPX-xxx"
-$env:JWT_SECRET="my-secret-key"
-$env:FRONTEND_URL="http://localhost:3000"
-mvn spring-boot:run
-```
+#### Lưu ý khi dùng IDE
+
+- **IntelliJ IDEA**: Chạy bằng nút Run như bình thường, `.env` sẽ tự được đọc
+- **VS Code**: Chạy `mvn spring-boot:run` trong terminal là đủ
+- **Terminal (bất kỳ OS)**: Chỉ cần `mvn spring-boot:run` tại thư mục gốc project
+
+#### Thứ tự ưu tiên của biến
+
+Nếu cùng một biến được đặt ở nhiều nơi, thứ tự ưu tiên (cao → thấp):
+
+1. OS environment variable (`export JWT_SECRET=...`)
+2. JVM system property (`-Djwt.secret=...`)
+3. File `.env` (qua `spring-dotenv`)
+4. Giá trị mặc định trong `application.properties` (sau dấu `:`)
+
+Nghĩa là biến đặt trực tiếp trong OS sẽ **ghi đè** `.env`.
 
 ### 3.4. Kiểm thử cấu hình OAuth
 
