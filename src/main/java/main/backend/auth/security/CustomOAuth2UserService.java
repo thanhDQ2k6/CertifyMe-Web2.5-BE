@@ -7,6 +7,7 @@ import main.backend.auth.entity.User;
 import main.backend.auth.enums.RoleType;
 import main.backend.auth.repository.RoleRepository;
 import main.backend.auth.repository.UserRepository;
+import main.backend.common.exception.ResourceNotFoundException;
 import main.backend.common.util.IdGenerator;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
@@ -19,78 +20,67 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
-  private final UserRepository userRepository;
-  private final RoleRepository roleRepository;
+    private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
 
-  @Override
-  public OAuth2User loadUser(OAuth2UserRequest userRequest)
-    throws OAuth2AuthenticationException {
-    OAuth2User oAuth2User = super.loadUser(userRequest);
+    @Override
+    public OAuth2User loadUser(OAuth2UserRequest userRequest)
+            throws OAuth2AuthenticationException {
+        OAuth2User oAuth2User = super.loadUser(userRequest);
+        processOAuth2User(oAuth2User);
+        return oAuth2User;
+    }
 
-    // Default role là STUDENT nếu không có role parameter
-    RoleType roleType = RoleType.STUDENT;
+    private void processOAuth2User(OAuth2User oAuth2User) {
+        String email = oAuth2User.getAttribute("email");
+        String googleId = oAuth2User.getAttribute("sub");
+        String name = oAuth2User.getAttribute("name");
+        String picture = oAuth2User.getAttribute("picture");
 
-    // Xử lý user
-    processOAuth2User(oAuth2User, roleType);
+        userRepository.findByEmail(email)
+                .ifPresentOrElse(
+                        existingUser -> updateExistingUser(existingUser, name, picture, googleId),
+                        () -> createNewUser(email, googleId, name, picture)
+                );
+    }
 
-    return oAuth2User;
-  }
+    private void updateExistingUser(User user, String name, String picture, String googleId) {
+        boolean updated = false;
 
-  private User processOAuth2User(OAuth2User oAuth2User, RoleType roleType) {
-    String email = oAuth2User.getAttribute("email");
-    String googleId = oAuth2User.getAttribute("sub");
-    String name = oAuth2User.getAttribute("name");
-    String picture = oAuth2User.getAttribute("picture");
+        if (name != null && !name.equals(user.getFullName())) {
+            user.setFullName(name);
+            updated = true;
+        }
+        if (picture != null && !picture.equals(user.getAvatarUrl())) {
+            user.setAvatarUrl(picture);
+            updated = true;
+        }
+        if (googleId != null && !googleId.equals(user.getGoogleId())) {
+            user.setGoogleId(googleId);
+            updated = true;
+        }
+        // KHÔNG ghi đè role — giữ nguyên role hiện tại
 
-    User user = userRepository
-      .findByEmail(email)
-      .map(existingUser ->
-        updateExistingUser(existingUser, name, picture, roleType)
-      )
-      .orElseGet(() -> createNewUser(email, googleId, name, picture, roleType));
+        if (updated) {
+            userRepository.save(user);
+        }
+    }
 
-    return user;
-  }
+    private void createNewUser(String email, String googleId, String name, String picture) {
+        Role studentRole = roleRepository.findByRoleName(RoleType.STUDENT)
+                .orElseThrow(() -> new ResourceNotFoundException("STUDENT role not found in database"));
 
-  private User updateExistingUser(
-    User user,
-    String name,
-    String picture,
-    RoleType roleType
-  ) {
-    user.setFullName(name);
-    user.setAvatarUrl(picture);
+        User user = User.builder()
+                .userId(IdGenerator.generateUserId())
+                .email(email)
+                .googleId(googleId)
+                .fullName(name != null ? name : "User")
+                .avatarUrl(picture)
+                .role(studentRole)
+                .isActive(true)
+                .build();
 
-    // Cập nhật role nếu user chọn role mới
-    Role role = roleRepository
-      .findByRoleName(roleType)
-      .orElseThrow(() -> new RuntimeException("Role not found: " + roleType));
-    user.setRole(role);
-
-    return userRepository.save(user);
-  }
-
-  private User createNewUser(
-    String email,
-    String googleId,
-    String name,
-    String picture,
-    RoleType roleType
-  ) {
-    Role role = roleRepository
-      .findByRoleName(roleType)
-      .orElseThrow(() -> new RuntimeException("Role not found: " + roleType));
-
-    User user = User.builder()
-      .userId(IdGenerator.generateUserId())
-      .email(email)
-      .googleId(googleId)
-      .fullName(name)
-      .avatarUrl(picture)
-      .role(role)
-      .isActive(true)
-      .build();
-
-    return userRepository.save(user);
-  }
+        userRepository.save(user);
+        log.info("Created new user: {} with role: STUDENT", email);
+    }
 }

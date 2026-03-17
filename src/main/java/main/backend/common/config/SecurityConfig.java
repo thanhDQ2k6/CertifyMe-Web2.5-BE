@@ -6,6 +6,7 @@ import main.backend.auth.security.JwtAuthenticationFilter;
 import main.backend.auth.security.OAuth2AuthenticationSuccessHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -31,33 +32,44 @@ public class SecurityConfig {
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
-                .authorizeHttpRequests(auth ->
-                        auth
-                                .requestMatchers(
-                                        "/",
-                                        "/error",
-                                        "/favicon.ico",
-                                        "/*/*.png",
-                                        "/*/*.gif",
-                                        "/*/*.svg",
-                                        "/*/*.jpg",
-                                        "/*/*.html",
-                                        "/*/*.css",
-                                        "/*/*.js"
-                                )
-                                .permitAll()
-                                // /api/auth/** thành /api/** để lách login
-                                .requestMatchers("/api/**", "/oauth2/**", "/login/**")
-                                .permitAll()
-                                .anyRequest()
-                                .authenticated()
+                .authorizeHttpRequests(auth -> auth
+                        // Static resources
+                        .requestMatchers(
+                                "/", "/error", "/favicon.ico",
+                                "/*/*.png", "/*/*.gif", "/*/*.svg",
+                                "/*/*.jpg", "/*/*.html", "/*/*.css", "/*/*.js"
+                        ).permitAll()
+
+                        // OAuth2 + Auth endpoints (public)
+                        .requestMatchers("/oauth2/**", "/login/**").permitAll()
+                        .requestMatchers("/api/auth/**").permitAll()
+
+                        // Student endpoints
+                        .requestMatchers("/api/student/**").hasRole("STUDENT")
+                        .requestMatchers(HttpMethod.GET, "/api/courses/*").hasRole("STUDENT")
+                        .requestMatchers(HttpMethod.POST, "/api/quizzes/*/submit").hasRole("STUDENT")
+
+                        // Teacher endpoints
+                        .requestMatchers("/api/teacher/**").hasRole("TEACHER")
+                        .requestMatchers("/api/classes/**").hasRole("TEACHER")
+                        .requestMatchers(HttpMethod.GET, "/api/quizzes/*").hasAnyRole("STUDENT", "TEACHER")
+                        .requestMatchers(HttpMethod.POST, "/api/quizzes").hasRole("TEACHER")
+                        .requestMatchers(HttpMethod.PUT, "/api/quizzes/*").hasRole("TEACHER")
+                        .requestMatchers(HttpMethod.DELETE, "/api/quizzes/*").hasRole("TEACHER")
+                        .requestMatchers(HttpMethod.GET, "/api/quizzes/*/submissions").hasRole("TEACHER")
+
+                        // Admin endpoints
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/certificates/**").hasRole("ADMIN")
+
+                        // Everything else requires authentication
+                        .anyRequest().authenticated()
                 )
-                .oauth2Login(oauth2 ->
-                        oauth2
-                                .userInfoEndpoint(userInfo ->
-                                        userInfo.userService(customOAuth2UserService)
-                                )
-                                .successHandler(oAuth2AuthenticationSuccessHandler)
+                .oauth2Login(oauth2 -> oauth2
+                        .userInfoEndpoint(userInfo ->
+                                userInfo.userService(customOAuth2UserService)
+                        )
+                        .successHandler(oAuth2AuthenticationSuccessHandler)
                 )
                 .addFilterBefore(
                         jwtAuthenticationFilter,

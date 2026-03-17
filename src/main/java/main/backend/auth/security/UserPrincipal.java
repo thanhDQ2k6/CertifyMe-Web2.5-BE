@@ -18,6 +18,7 @@ public class UserPrincipal implements UserDetails {
   private String email;
   private String fullName;
   private RoleType role;
+  private boolean active;
   private Collection<? extends GrantedAuthority> authorities;
 
   public static UserPrincipal create(User user) {
@@ -26,6 +27,7 @@ public class UserPrincipal implements UserDetails {
       user.getEmail(),
       user.getFullName(),
       user.getRole().getRoleName(),
+      Boolean.TRUE.equals(user.getIsActive()),
       Collections.singletonList(
         new SimpleGrantedAuthority(
           "ROLE_" + user.getRole().getRoleName().name()
@@ -61,6 +63,6 @@ public class UserPrincipal implements UserDetails {
 
   @Override
   public boolean isEnabled() {
-    return true;
+    return active;
   }
 }
