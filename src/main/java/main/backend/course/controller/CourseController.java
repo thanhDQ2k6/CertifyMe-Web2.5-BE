@@ -2,6 +2,7 @@ package main.backend.course.controller;
 
 import lombok.RequiredArgsConstructor;
 import main.backend.course.dto.response.CourseDetailResponse;
+import main.backend.course.dto.response.CourseListItemResponse;
 import main.backend.course.service.CourseService;
 import main.backend.common.dto.ApiResponse;
 import main.backend.auth.security.UserPrincipal;
@@ -13,12 +14,19 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/courses")
 @RequiredArgsConstructor
 public class CourseController {
 
     private final CourseService courseService;
+
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<CourseListItemResponse>>> getAllCourses() {
+        return ResponseEntity.ok(ApiResponse.success(courseService.getAllPublicCourses()));
+    }
 
     @GetMapping("/{courseId}")
     @PreAuthorize("hasRole('STUDENT')")

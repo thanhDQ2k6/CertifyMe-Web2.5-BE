@@ -22,6 +22,7 @@ import main.backend.enrollment.entity.Enrollment;
 import main.backend.enrollment.repository.EnrollmentRepository;
 import main.backend.quiz.dto.request.QuizRequestDTO;
 import main.backend.quiz.dto.request.QuizSubmissionRequest;
+import main.backend.quiz.dto.response.QuizResultDetailResponse;
 import main.backend.quiz.dto.response.QuizResultResponse;
 import main.backend.quiz.entity.Question;
 import main.backend.quiz.entity.Quiz;
@@ -160,6 +161,33 @@ public class QuizService {
         return sub;
       })
       .toList();
+  }
+
+  public QuizResultDetailResponse getQuizResultForStudent(String quizId, String studentId) {
+    Quiz quiz = quizRepository
+      .findById(quizId)
+      .orElseThrow(() -> new ResourceNotFoundException("Quiz not found: " + quizId));
+
+    List<QuizAttempt> attempts = quizAttemptRepository
+      .findByStudentAndQuizOrderByScoreDesc(studentId, quizId);
+
+    if (attempts.isEmpty()) {
+      throw new ResourceNotFoundException("No attempt found for this quiz");
+    }
+
+    QuizAttempt bestAttempt = attempts.get(0);
+    double passingScore = quiz.getPassingScore() != null ? quiz.getPassingScore() : 5.0;
+
+    return QuizResultDetailResponse.builder()
+      .quizId(quiz.getQuizId())
+      .quizTitle(quiz.getTitle())
+      .score(bestAttempt.getScore())
+      .maxScore(10.0)
+      .passingScore(passingScore)
+      .status(bestAttempt.getIsPassed() ? "PASSED" : "FAILED")
+      .attemptCount(attempts.size())
+      .submittedAt(bestAttempt.getSubmittedAt().toString())
+      .build();
   }
 
   @Transactional

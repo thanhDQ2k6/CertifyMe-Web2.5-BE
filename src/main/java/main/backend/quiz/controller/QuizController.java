@@ -2,8 +2,10 @@ package main.backend.quiz.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import main.backend.auth.security.UserPrincipal;
 import main.backend.common.dto.ApiResponse;
 import main.backend.quiz.dto.request.QuizRequestDTO;
+import main.backend.quiz.dto.response.QuizResultDetailResponse;
 import main.backend.quiz.dto.response.QuizResultResponse;
 import main.backend.course.dto.response.QuizResponseDTO;
 import main.backend.course.dto.response.QuizSubmissionResponseDTO;
@@ -12,6 +14,7 @@ import main.backend.quiz.dto.request.QuizSubmissionRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -67,5 +70,15 @@ public class QuizController {
     @PreAuthorize("hasAnyRole('STUDENT', 'TEACHER')")
     public ResponseEntity<ApiResponse<QuizResponseDTO>> getQuizDetail(@PathVariable String quizId) {
         return ResponseEntity.ok(ApiResponse.success(quizService.getQuizDetail(quizId)));
+    }
+
+    @GetMapping("/quizzes/{quizId}/result")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<ApiResponse<QuizResultDetailResponse>> getQuizResult(
+            @PathVariable String quizId,
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+        String studentId = userPrincipal.getUserId();
+        return ResponseEntity.ok(ApiResponse.success(
+                quizService.getQuizResultForStudent(quizId, studentId)));
     }
 }

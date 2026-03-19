@@ -69,4 +69,11 @@ public class AdminController {
             @Valid @RequestBody UpdateUserStatusRequest request) {
         return ResponseEntity.ok(ApiResponse.success(adminService.updateUserStatus(userId, request)));
     }
+
+    @PutMapping("/admin/users/{userId}/role")
+    public ResponseEntity<ApiResponse<UpdateUserRoleResponse>> updateUserRole(
+            @PathVariable String userId,
+            @Valid @RequestBody UpdateUserRoleRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(adminService.updateUserRole(userId, request)));
+    }
 }

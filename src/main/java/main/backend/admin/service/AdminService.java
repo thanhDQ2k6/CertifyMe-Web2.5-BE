@@ -241,6 +241,25 @@ public class AdminService {
                 .build();
     }
 
+    public UpdateUserRoleResponse updateUserRole(String userId, UpdateUserRoleRequest request) {
+        User user = userQueryService.getByIdOrThrow(userId);
+        String previousRole = user.getRole().getRoleName().name();
+
+        RoleType roleType = RoleType.valueOf(request.getRole().toUpperCase());
+        Role role = roleRepository.findByRoleName(roleType)
+                .orElseThrow(() -> new ResourceNotFoundException("Role not found: " + request.getRole()));
+
+        user.setRole(role);
+        userRepository.save(user);
+
+        return UpdateUserRoleResponse.builder()
+                .userId(userId)
+                .previousRole(previousRole)
+                .newRole(roleType.name())
+                .updatedAt(formatDateTime(LocalDateTime.now()))
+                .build();
+    }
+
     private Double getAverageScoreForCertificate(Certificate cert) {
         return enrollmentRepository
                 .findByStudent_UserIdAndClassEntity_ClassId(

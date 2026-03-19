@@ -5,6 +5,8 @@ import main.backend.certificate.repository.CertificateRepository;
 import main.backend.common.enums.QuizStatus;
 import main.backend.common.exception.ResourceNotFoundException;
 import main.backend.course.dto.response.CourseDetailResponse;
+import main.backend.course.dto.response.CourseListItemResponse;
+import main.backend.course.repository.CourseRepository;
 import main.backend.enrollment.entity.Enrollment;
 import main.backend.enrollment.repository.EnrollmentRepository;
 import main.backend.quiz.entity.Quiz;
@@ -20,10 +22,22 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class CourseService {
 
+    private final CourseRepository courseRepository;
     private final EnrollmentRepository enrollmentRepository;
     private final QuizRepository quizRepository;
     private final QuizAttemptRepository quizAttemptRepository;
     private final CertificateRepository certificateRepository;
+
+    public List<CourseListItemResponse> getAllPublicCourses() {
+        return courseRepository.findByIsActiveTrue().stream()
+                .map(course -> CourseListItemResponse.builder()
+                        .courseId(course.getCourseId())
+                        .courseCode(course.getCourseCode())
+                        .courseName(course.getCourseName())
+                        .description(course.getDescription())
+                        .build())
+                .toList();
+    }
 
     public CourseDetailResponse getCourseDetail(String courseId, String studentId) {
 

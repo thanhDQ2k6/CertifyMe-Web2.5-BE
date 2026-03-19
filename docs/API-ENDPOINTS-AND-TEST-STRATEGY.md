@@ -1,7 +1,7 @@
 # API ENDPOINTS & TEST STRATEGY
 
 > **Dự án**: LMS Backend
-> **Ngày**: 17/03/2026
+> **Ngày cập nhật**: 19/03/2026
 > **Base URL**: `http://localhost:8080`
 
 ---
@@ -342,9 +342,9 @@ Kiểm tra role hiện tại.
 
 ## 5. Module: Enrollment
 
-> **Mô tả**: Dashboard học sinh — danh sách khóa học & chứng chỉ
-> **Base**: `/api/student`
-> **Quyền**: STUDENT
+> **Mô tả**: Dashboard học sinh — danh sách khóa học & chứng chỉ + quản lý đăng ký
+> **Base**: `/api/student`, `/api/enrollments`
+> **Quyền**: STUDENT (xem), TEACHER/ADMIN (quản lý)
 
 ### 5.1. GET /api/student/{studentId}/courses
 
@@ -401,15 +401,110 @@ Danh sách chứng chỉ.
 }
 ```
 
+### 5.3. POST /api/enrollments
+
+Đăng ký học viên vào lớp học.
+
+**Quyền**: TEACHER hoặc ADMIN
+
+**Request Body**:
+
+```json
+{
+  "studentId": "STU001",
+  "classId": "CLS001"
+}
+```
+
+| Field       | Bắt buộc | Validation |
+| ----------- | :------: | ---------- |
+| `studentId` |   Yes    | @NotBlank  |
+| `classId`   |   Yes    | @NotBlank  |
+
+**Response** `201`:
+
+```json
+{
+  "success": true,
+  "data": {
+    "enrollmentId": 1,
+    "studentId": "STU001",
+    "studentName": "Nguyễn Văn A",
+    "classId": "CLS001",
+    "className": "JAVA-01",
+    "status": "LEARNING",
+    "enrolledAt": "2026-03-19T10:00:00"
+  }
+}
+```
+
+**Lỗi thường gặp**:
+
+| Status | Error                               | Nguyên nhân                        |
+| ------ | ----------------------------------- | ---------------------------------- |
+| 400    | User must be a student              | User không có role STUDENT         |
+| 400    | Student already enrolled in class   | Đã đăng ký trước đó                |
+| 404    | Class not found                     | classId không tồn tại              |
+| 404    | User not found                      | studentId không tồn tại            |
+
+### 5.4. DELETE /api/enrollments/{enrollmentId}
+
+Hủy đăng ký học viên (soft delete — đổi status → DROPPED).
+
+**Quyền**: TEACHER hoặc ADMIN
+
+**Response** `200`:
+
+```json
+{
+  "success": true,
+  "data": null
+}
+```
+
+**Lỗi**:
+
+| Status | Error                | Nguyên nhân              |
+| ------ | -------------------- | ------------------------ |
+| 404    | Enrollment not found | enrollmentId không tồn tại |
+
 ---
 
 ## 6. Module: Course
 
-> **Mô tả**: Chi tiết khóa học cho học sinh (tiến độ, quiz, chứng chỉ)
+> **Mô tả**: Danh sách khóa học (public) + chi tiết khóa học cho học sinh
 > **Base**: `/api/courses`
-> **Quyền**: STUDENT
+> **Quyền**: Public (danh sách), STUDENT (chi tiết)
 
-### 6.1. GET /api/courses/{courseId}
+### 6.1. GET /api/courses
+
+Danh sách tất cả khóa học công khai (không cần đăng nhập).
+
+**Quyền**: Public (không cần token)
+
+**Response** `200`:
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "courseId": "CRS001",
+      "courseCode": "CS101",
+      "courseName": "Lập trình Java",
+      "description": "Khóa học lập trình Java cơ bản"
+    },
+    {
+      "courseId": "CRS002",
+      "courseCode": "CS102",
+      "courseName": "Lập trình Python",
+      "description": "Khóa học lập trình Python"
+    }
+  ]
+}
+```
+
+### 6.2. GET /api/courses/{courseId}
 
 Chi tiết khóa học với tiến độ cá nhân (lấy studentId từ JWT).
 
@@ -768,6 +863,43 @@ Danh sách bài nộp (cho giáo viên xem kết quả).
 }
 ```
 
+### 8.8. GET /api/quizzes/{quizId}/result
+
+Xem kết quả quiz của học sinh (lấy studentId từ JWT).
+
+**Quyền**: STUDENT
+
+**Response** `200`:
+
+```json
+{
+  "success": true,
+  "data": {
+    "quizId": "QZ001",
+    "quizTitle": "Quiz 1: Biến và kiểu dữ liệu",
+    "score": 8.0,
+    "maxScore": 10.0,
+    "passingScore": 5.0,
+    "status": "PASSED",
+    "attemptCount": 2,
+    "submittedAt": "2026-03-17T14:30:00"
+  }
+}
+```
+
+| Field          | Mô tả                           |
+| -------------- | ------------------------------- |
+| `score`        | Điểm cao nhất trong các lần làm |
+| `attemptCount` | Số lần làm bài                  |
+| `status`       | `PASSED` hoặc `FAILED`          |
+
+**Lỗi**:
+
+| Status | Error                        | Nguyên nhân                   |
+| ------ | ---------------------------- | ----------------------------- |
+| 404    | Quiz not found               | quizId không tồn tại          |
+| 404    | No attempt found for quiz    | Student chưa làm bài quiz này |
+
 ---
 
 ## 9. Module: Admin — Certificates
@@ -1038,6 +1170,43 @@ Khóa / mở tài khoản.
 }
 ```
 
+### 10.3. PUT /api/admin/users/{userId}/role
+
+Thay đổi role của người dùng.
+
+**Request Body**:
+
+```json
+{
+  "role": "TEACHER"
+}
+```
+
+| Field  | Bắt buộc | Validation                            |
+| ------ | :------: | ------------------------------------- |
+| `role` |   Yes    | @NotBlank (`STUDENT`, `TEACHER`, `ADMIN`) |
+
+**Response** `200`:
+
+```json
+{
+  "success": true,
+  "data": {
+    "userId": "STU001",
+    "previousRole": "STUDENT",
+    "newRole": "TEACHER",
+    "updatedAt": "2026-03-19T10:00:00Z"
+  }
+}
+```
+
+**Lỗi**:
+
+| Status | Error          | Nguyên nhân           |
+| ------ | -------------- | --------------------- |
+| 404    | User not found | userId không tồn tại  |
+| 404    | Role not found | role không hợp lệ     |
+
 ---
 
 ## 11. Test Strategy: Postman
@@ -1059,8 +1228,13 @@ LMS Backend/
 │   ├── GET /api/student/{studentId}/courses
 │   └── GET /api/student/{studentId}/certificates
 │
-├── 📁 03. Student — Course Detail/
-│   └── GET /api/courses/{courseId}
+├── 📁 02b. Enrollment Management (Teacher/Admin)/
+│   ├── POST /api/enrollments
+│   └── DELETE /api/enrollments/{enrollmentId}
+│
+├── 📁 03. Courses/
+│   ├── GET /api/courses (public)
+│   └── GET /api/courses/{courseId} (student)
 │
 ├── 📁 04. Teacher — Classroom/
 │   ├── GET /api/teacher/{teacherId}/classes
@@ -1078,8 +1252,9 @@ LMS Backend/
 │   ├── DELETE /api/quizzes/{quizId}
 │   └── GET /api/quizzes/{quizId}/submissions
 │
-├── 📁 06. Student — Quiz Submit/
-│   └── POST /api/quizzes/{quizId}/submit
+├── 📁 06. Student — Quiz/
+│   ├── POST /api/quizzes/{quizId}/submit
+│   └── GET /api/quizzes/{quizId}/result
 │
 ├── 📁 07. Admin — Certificates/
 │   ├── GET /api/admin/certificates/stats
@@ -1092,7 +1267,8 @@ LMS Backend/
 ├── 📁 08. Admin — Users/
 │   ├── GET /api/admin/users
 │   ├── GET /api/admin/users?role=STUDENT&status=active
-│   └── PUT /api/admin/users/{userId}/status
+│   ├── PUT /api/admin/users/{userId}/status
+│   └── PUT /api/admin/users/{userId}/role
 │
 └── 📁 09. Error Cases/
     ├── 401 — Request không có token

@@ -151,4 +151,19 @@ public class AdminResponseDTO {
         private Boolean isActive;
         private String updatedAt;
     }
+
+    // User Role
+    @Data
+    public static class UpdateUserRoleRequest {
+        @NotBlank
+        private String role;
+    }
+
+    @Data @Builder
+    public static class UpdateUserRoleResponse {
+        private String userId;
+        private String previousRole;
+        private String newRole;
+        private String updatedAt;
+    }
 }
