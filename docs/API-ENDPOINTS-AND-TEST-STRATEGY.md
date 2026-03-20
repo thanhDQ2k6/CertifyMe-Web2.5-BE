@@ -63,18 +63,119 @@ Khi lỗi:
 
 ## 2. Xác thực
 
-### Luồng đăng nhập
+### Luồng đăng nhập & phân vai (Role Assignment)
 
 ```
-1. Browser mở: GET /oauth2/authorization/google
-2. Google xác minh → redirect về: GET /oauth2/redirect?token=<JWT>
-3. Frontend lưu JWT, gửi trong mọi request tiếp theo
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        LUỒNG ĐĂNG NHẬP GOOGLE OAUTH2                         │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  1. Browser mở: GET /oauth2/authorization/google                            │
+│                          │                                                  │
+│                          ▼                                                  │
+│  2. Redirect → Google login page                                            │
+│                          │                                                  │
+│                          ▼                                                  │
+│  3. Google xác thực → callback về Backend                                   │
+│                          │                                                  │
+│                          ▼                                                  │
+│  4. CustomOAuth2UserService.loadUser()                                      │
+│     ┌────────────────────┴────────────────────┐                            │
+│     │                                         │                            │
+│     ▼                                         ▼                            │
+│  [User mới]                              [User đã có]                       │
+│  - Tạo account                           - Cập nhật name, avatar            │
+│  - Gán role: STUDENT                     - GIỮ NGUYÊN role hiện tại        │
+│     │                                         │                            │
+│     └─────────────────┬───────────────────────┘                            │
+│                       ▼                                                     │
+│  5. OAuth2SuccessHandler tạo JWT + xác định redirect path theo role          │
+│                       │                                                     │
+│                       ▼                                                     │
+│  6. Redirect → Frontend với params:                                         │
+│     /oauth2/redirect?token=<JWT>&role=<ROLE>&redirect=<PATH>                │
+│                       │                                                     │
+│                       ▼                                                     │
+│  7. Frontend lưu token + redirect theo path:                                │
+│     - STUDENT → /student/dashboard                                          │
+│     - TEACHER → /teacher/dashboard                                          │
+│     - ADMIN   → /admin/dashboard                                            │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
+
+### Cơ chế phân vai (Role Assignment)
+
+| Trường hợp          | Role được gán            | Ghi chú                                      |
+| ------------------- | ------------------------ | -------------------------------------------- |
+| Đăng nhập lần đầu   | **STUDENT** (mặc định)   | Tự động tạo account với role STUDENT         |
+| Đăng nhập lại       | Giữ nguyên role hiện tại | Không ghi đè, chỉ cập nhật name/avatar       |
+| Admin thay đổi role | Role mới do Admin chọn   | Qua API `PUT /api/admin/users/{userId}/role` |
+
+**Backend code xử lý** (`CustomOAuth2UserService.java`):
+
+- User mới → `createNewUser()` → gán `RoleType.STUDENT`
+- User cũ → `updateExistingUser()` → **không** thay đổi `user.role`
+
+**Redirect theo role** (`OAuth2AuthenticationSuccessHandler.java`):
+
+```java
+private String getRedirectPathByRole(RoleType roleType) {
+    return switch (roleType) {
+        case STUDENT -> "/student/dashboard";
+        case TEACHER -> "/teacher/dashboard";
+        case ADMIN -> "/admin/dashboard";
+    };
+}
+```
+
+**Redirect URL format:**
+```
+{FRONTEND_URL}/oauth2/redirect?token=<JWT>&role=<ROLE>&redirect=<PATH>
+```
+
+### Frontend Routing theo Role
+
+Frontend sử dụng Vue Router với `meta.roles` để kiểm soát quyền truy cập:
+
+```javascript
+// Route guards (index.js)
+router.beforeEach((to, from, next) => {
+  const auth = useAuth();
+  const requiredRoles = to.meta.roles || [];
+
+  if (requiredRoles.length && !requiredRoles.includes(auth.userRole.value)) {
+    next({ name: "accessDenied" }); // → /auth/access
+    return;
+  }
+  next();
+});
+```
+
+**Các route theo role:**
+
+| Role    | Routes                                                                                                     |
+| ------- | ---------------------------------------------------------------------------------------------------------- |
+| STUDENT | `/student/dashboard`, `/student/course/:id`, `/student/quiz/:quizId`, `/student/certificates`              |
+| TEACHER | `/teacher/dashboard`, `/teacher/class/:id`, `/teacher/quiz/:classId`, `/teacher/quiz/:classId/submissions` |
+| ADMIN   | `/admin/dashboard`, `/admin/certificate/:id`, `/admin/users`                                               |
 
 ### Header cho mọi request (trừ đăng nhập)
 
 ```
 Authorization: Bearer <JWT_TOKEN>
+```
+
+### Cấu trúc JWT Token
+
+```json
+{
+  "sub": "USR-xxxxxxxx", // userId
+  "email": "user@gmail.com",
+  "role": "STUDENT", // STUDENT | TEACHER | ADMIN
+  "iat": 1710672000, // issued at
+  "exp": 1710758400 // expiration (24h)
+}
 ```
 
 ### Lấy token test
@@ -83,6 +184,7 @@ Authorization: Bearer <JWT_TOKEN>
 
 - Tạo token thủ công trong DB test với role STUDENT / TEACHER / ADMIN
 - Gọi `/oauth2/authorization/google` trên browser, copy token từ redirect
+- Dùng Admin account để đổi role user test qua `PUT /api/admin/users/{userId}/role`
 
 ---
 
@@ -159,6 +261,11 @@ cp .env.example .env
 Mở file `.env` và thay thế các giá trị:
 
 ```properties
+# Database (MySQL)
+DB_URL=jdbc:mysql://localhost:3306/lms_database?useSSL=false&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true
+DB_USERNAME=root
+DB_PASSWORD=your-mysql-password
+
 # Google OAuth2 — Lấy từ Google Cloud Console (Bước 5 ở trên)
 GOOGLE_CLIENT_ID=123456789-abcdef.apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=GOCSPX-your-actual-secret-here
@@ -172,6 +279,9 @@ FRONTEND_URL=http://localhost:3000
 
 | Biến                   | Mô tả                                  | Cách lấy                           |
 | ---------------------- | -------------------------------------- | ---------------------------------- |
+| `DB_URL`               | JDBC connection string                 | Mặc định localhost:3306            |
+| `DB_USERNAME`          | MySQL username                         | Mặc định `root`                    |
+| `DB_PASSWORD`          | MySQL password                         | Password của MySQL server          |
 | `GOOGLE_CLIENT_ID`     | OAuth Client ID từ Google              | Google Cloud Console → Credentials |
 | `GOOGLE_CLIENT_SECRET` | OAuth Client Secret từ Google          | Google Cloud Console → Credentials |
 | `JWT_SECRET`           | Khóa bí mật để ký JWT token            | Tự tạo, tối thiểu 32 ký tự         |
@@ -244,9 +354,12 @@ Nếu sai `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`, ứng dụng vẫn khởi
 3. Đăng nhập bằng tài khoản Google
 4. Sau khi xác thực, Google redirect về:
    ```
-   http://localhost:3000/oauth2/redirect?token=eyJhbGciOiJIUzI1NiJ9...
+   http://localhost:3000/oauth2/redirect?token=eyJ...&role=STUDENT&redirect=/student/dashboard
    ```
-5. Copy giá trị `token` từ URL → Đây là JWT token dùng cho các API tiếp theo
+5. Frontend đọc params:
+   - `token` → lưu vào localStorage
+   - `role` → lưu vào state (useAuth)
+   - `redirect` → điều hướng đến dashboard tương ứng
 
 > **Nếu frontend chưa chạy**: URL sẽ báo lỗi không truy cập được, nhưng bạn vẫn có thể copy token từ thanh địa chỉ trình duyệt.
 
@@ -440,12 +553,12 @@ Danh sách chứng chỉ.
 
 **Lỗi thường gặp**:
 
-| Status | Error                               | Nguyên nhân                        |
-| ------ | ----------------------------------- | ---------------------------------- |
-| 400    | User must be a student              | User không có role STUDENT         |
-| 400    | Student already enrolled in class   | Đã đăng ký trước đó                |
-| 404    | Class not found                     | classId không tồn tại              |
-| 404    | User not found                      | studentId không tồn tại            |
+| Status | Error                             | Nguyên nhân                |
+| ------ | --------------------------------- | -------------------------- |
+| 400    | User must be a student            | User không có role STUDENT |
+| 400    | Student already enrolled in class | Đã đăng ký trước đó        |
+| 404    | Class not found                   | classId không tồn tại      |
+| 404    | User not found                    | studentId không tồn tại    |
 
 ### 5.4. DELETE /api/enrollments/{enrollmentId}
 
@@ -464,8 +577,8 @@ Hủy đăng ký học viên (soft delete — đổi status → DROPPED).
 
 **Lỗi**:
 
-| Status | Error                | Nguyên nhân              |
-| ------ | -------------------- | ------------------------ |
+| Status | Error                | Nguyên nhân                |
+| ------ | -------------------- | -------------------------- |
 | 404    | Enrollment not found | enrollmentId không tồn tại |
 
 ---
@@ -895,10 +1008,10 @@ Xem kết quả quiz của học sinh (lấy studentId từ JWT).
 
 **Lỗi**:
 
-| Status | Error                        | Nguyên nhân                   |
-| ------ | ---------------------------- | ----------------------------- |
-| 404    | Quiz not found               | quizId không tồn tại          |
-| 404    | No attempt found for quiz    | Student chưa làm bài quiz này |
+| Status | Error                     | Nguyên nhân                   |
+| ------ | ------------------------- | ----------------------------- |
+| 404    | Quiz not found            | quizId không tồn tại          |
+| 404    | No attempt found for quiz | Student chưa làm bài quiz này |
 
 ---
 
@@ -1182,8 +1295,8 @@ Thay đổi role của người dùng.
 }
 ```
 
-| Field  | Bắt buộc | Validation                            |
-| ------ | :------: | ------------------------------------- |
+| Field  | Bắt buộc | Validation                                |
+| ------ | :------: | ----------------------------------------- |
 | `role` |   Yes    | @NotBlank (`STUDENT`, `TEACHER`, `ADMIN`) |
 
 **Response** `200`:
@@ -1202,10 +1315,10 @@ Thay đổi role của người dùng.
 
 **Lỗi**:
 
-| Status | Error          | Nguyên nhân           |
-| ------ | -------------- | --------------------- |
-| 404    | User not found | userId không tồn tại  |
-| 404    | Role not found | role không hợp lệ     |
+| Status | Error          | Nguyên nhân          |
+| ------ | -------------- | -------------------- |
+| 404    | User not found | userId không tồn tại |
+| 404    | Role not found | role không hợp lệ    |
 
 ---
 
