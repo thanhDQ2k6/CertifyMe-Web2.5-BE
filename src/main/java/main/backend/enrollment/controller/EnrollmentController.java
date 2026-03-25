@@ -16,22 +16,25 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class EnrollmentController {
 
-    private final EnrollmentService enrollmentService;
+  private final EnrollmentService enrollmentService;
 
-    @PostMapping
-    @PreAuthorize("hasAnyRole('TEACHER', 'ADMIN')")
-    public ResponseEntity<ApiResponse<EnrollmentResponseDTO>> createEnrollment(
-            @Valid @RequestBody EnrollmentRequestDTO request) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success(enrollmentService.createEnrollment(request)));
-    }
+  @PostMapping
+  @PreAuthorize("hasAnyRole('TEACHER', 'ADMIN')")
+  public ResponseEntity<ApiResponse<EnrollmentResponseDTO>> createEnrollment(
+    @Valid @RequestBody EnrollmentRequestDTO request
+  ) {
+    return ResponseEntity.status(HttpStatus.CREATED).body(
+      ApiResponse.success(enrollmentService.createEnrollment(request))
+    );
+  }
 
-    @DeleteMapping
-    @PreAuthorize("hasAnyRole('TEACHER', 'ADMIN')")
-    public ResponseEntity<ApiResponse<Void>> deleteEnrollment(
-            @RequestParam String studentCode,
-            @RequestParam String classId) {
-        enrollmentService.deleteEnrollment(studentCode, classId);
-        return ResponseEntity.ok(ApiResponse.success(null));
-    }
+  @DeleteMapping
+  @PreAuthorize("hasAnyRole('TEACHER', 'ADMIN')")
+  public ResponseEntity<ApiResponse<Void>> deleteEnrollment(
+    @RequestParam String studentCode,
+    @RequestParam String classId
+  ) {
+    enrollmentService.deleteEnrollment(studentCode, classId);
+    return ResponseEntity.ok(ApiResponse.success(null));
+  }
 }
