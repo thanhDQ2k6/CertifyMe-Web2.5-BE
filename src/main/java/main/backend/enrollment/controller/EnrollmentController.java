@@ -26,10 +26,12 @@ public class EnrollmentController {
                 .body(ApiResponse.success(enrollmentService.createEnrollment(request)));
     }
 
-    @DeleteMapping("/{enrollmentId}")
+    @DeleteMapping
     @PreAuthorize("hasAnyRole('TEACHER', 'ADMIN')")
-    public ResponseEntity<ApiResponse<Void>> deleteEnrollment(@PathVariable Long enrollmentId) {
-        enrollmentService.deleteEnrollment(enrollmentId);
+    public ResponseEntity<ApiResponse<Void>> deleteEnrollment(
+            @RequestParam String studentCode,
+            @RequestParam String classId) {
+        enrollmentService.deleteEnrollment(studentCode, classId);
         return ResponseEntity.ok(ApiResponse.success(null));
     }
 }

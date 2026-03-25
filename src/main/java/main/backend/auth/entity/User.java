@@ -35,6 +35,9 @@ public class User {
   @Column(name = "google_subject_id", unique = true)
   private String googleId;
 
+  @Column(name = "user_code", unique = true, length = 20)
+  private String userCode; // HS00001, GV00001, AD00001
+
   @Builder.Default
   @Column(name = "is_active", nullable = false)
   private Boolean isActive = true;
@@ -42,8 +45,8 @@ public class User {
   @Column(name = "created_at", nullable = false, updatable = false)
   private Instant createdAt;
 
-    @Column(name = "updated_at", columnDefinition = "TIMESTAMP NULL")
-    private Instant updatedAt;
+  @Column(name = "updated_at", columnDefinition = "TIMESTAMP NULL")
+  private Instant updatedAt;
 
   @PrePersist
   protected void onCreate() {

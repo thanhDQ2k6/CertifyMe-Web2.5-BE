@@ -8,6 +8,7 @@
 
 1. [Response Structure](#1-response-structure)
 2. [Authentication](#2-authentication)
+   - [2.5 User Search APIs](#25-user-search-apis-new)
 3. [Student APIs](#3-student-apis)
 4. [Teacher APIs](#4-teacher-apis)
 5. [Quiz APIs](#5-quiz-apis)
@@ -89,6 +90,7 @@ Authorization: Bearer <token>
   "success": true,
   "data": {
     "userId": "c167d02c-260e-464a-9443-ebfbc212f300",
+    "userCode": "GV00001",
     "email": "thanhdqts00628@fpt.edu.vn",
     "fullName": "Duong Quang Thanh (PTCD HCM)",
     "avatarUrl": "https://lh3.googleusercontent.com/...",
@@ -97,6 +99,11 @@ Authorization: Bearer <token>
   }
 }
 ```
+
+> **User Code Format:**
+> - `HS00001` - Học Sinh (Student)
+> - `GV00001` - Giáo Viên (Teacher)
+> - `AD00001` - Admin
 
 **Frontend Usage:**
 
@@ -143,6 +150,70 @@ Authorization: Bearer <token>
   "message": "You are logged in as: TEACHER",
   "data": null
 }
+```
+
+---
+
+## 2.5 User Search APIs (NEW)
+
+> **Role Required:** `TEACHER` or `ADMIN`
+
+### Search Students
+
+```
+GET /api/users/search/students?q=HS001
+Authorization: Bearer <token>
+```
+
+**Query Parameters:**
+
+| Param | Type   | Description                              |
+| ----- | ------ | ---------------------------------------- |
+| `q`   | string | Search by userCode, email, or fullName   |
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "userId": "3d505413-8993-45b2-8d41-3018ba80e0b1",
+      "userCode": "HS00001",
+      "email": "vinhdqts00629@fpt.edu.vn",
+      "fullName": "Duong Quang Vinh (PTCD HCM)",
+      "avatarUrl": "https://lh3.googleusercontent.com/...",
+      "role": "STUDENT",
+      "isActive": true
+    }
+  ]
+}
+```
+
+### Get User by ID or Code
+
+```
+GET /api/users/{idOrCode}
+Authorization: Bearer <token>
+```
+
+**Examples:**
+- `GET /api/users/HS00001` - Tìm bằng code
+- `GET /api/users/3d505413-8993-45b2-8d41-3018ba80e0b1` - Tìm bằng UUID
+
+**Frontend Usage - Add Student to Class:**
+
+```typescript
+// 1. Teacher search student by code
+const searchResponse = await apiClient.get('/api/users/search/students?q=HS001');
+const students = searchResponse.data.data;
+
+// 2. Select student and add to class
+const selectedStudent = students[0];
+await apiClient.post('/api/enrollments', {
+  studentCode: selectedStudent.userCode,  // HS00001
+  classId: 'CLS-005'
+});
 ```
 
 ---
@@ -958,7 +1029,16 @@ Authorization: Bearer <token>
 Content-Type: application/json
 ```
 
-**Request Body:**
+**Request Body (Option 1 - dùng User Code):**
+
+```json
+{
+  "studentCode": "HS00001",
+  "classId": "CLS-005"
+}
+```
+
+**Request Body (Option 2 - dùng UUID):**
 
 ```json
 {
@@ -966,6 +1046,8 @@ Content-Type: application/json
   "classId": "CLS-005"
 }
 ```
+
+> **Lưu ý:** Có thể dùng `studentCode` HOẶC `studentId`. Ưu tiên dùng `studentCode` vì dễ nhớ hơn.
 
 **Response:**
 
@@ -975,7 +1057,10 @@ Content-Type: application/json
   "data": {
     "enrollmentId": 1,
     "studentId": "3d505413-8993-45b2-8d41-3018ba80e0b1",
+    "studentCode": "HS00001",
+    "studentName": "Duong Quang Vinh",
     "classId": "CLS-005",
+    "className": "DS18302",
     "status": "LEARNING",
     "enrolledAt": "2026-03-20T10:00:00"
   }
@@ -985,8 +1070,24 @@ Content-Type: application/json
 ### 7.2 Delete Enrollment
 
 ```
-DELETE /api/enrollments/{enrollmentId}
+DELETE /api/enrollments?studentCode=HS00001&classId=CLS-001
 Authorization: Bearer <token>
+```
+
+**Query Parameters:**
+
+| Param         | Type   | Description      |
+| ------------- | ------ | ---------------- |
+| `studentCode` | string | Mã học viên      |
+| `classId`     | string | ID lớp học       |
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": null
+}
 ```
 
 ---
@@ -1007,6 +1108,7 @@ interface ApiResponse<T> {
 // User
 interface User {
   userId: string;
+  userCode: string;  // HS00001, GV00001, AD00001
   email: string;
   fullName: string;
   avatarUrl: string;

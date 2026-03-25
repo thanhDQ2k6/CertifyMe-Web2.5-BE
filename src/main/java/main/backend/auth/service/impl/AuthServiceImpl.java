@@ -23,6 +23,7 @@ public class AuthServiceImpl implements AuthService {
 
     return UserResponse.builder()
       .userId(user.getUserId())
+      .userCode(user.getUserCode())
       .email(user.getEmail())
       .fullName(user.getFullName())
       .avatarUrl(user.getAvatarUrl())

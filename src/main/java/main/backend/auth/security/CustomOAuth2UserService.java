@@ -20,67 +20,111 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
-    private final UserRepository userRepository;
-    private final RoleRepository roleRepository;
+  private final UserRepository userRepository;
+  private final RoleRepository roleRepository;
 
-    @Override
-    public OAuth2User loadUser(OAuth2UserRequest userRequest)
-            throws OAuth2AuthenticationException {
-        OAuth2User oAuth2User = super.loadUser(userRequest);
-        processOAuth2User(oAuth2User);
-        return oAuth2User;
+  @Override
+  public OAuth2User loadUser(OAuth2UserRequest userRequest)
+    throws OAuth2AuthenticationException {
+    OAuth2User oAuth2User = super.loadUser(userRequest);
+    processOAuth2User(oAuth2User);
+    return oAuth2User;
+  }
+
+  private void processOAuth2User(OAuth2User oAuth2User) {
+    String email = oAuth2User.getAttribute("email");
+    String googleId = oAuth2User.getAttribute("sub");
+    String name = oAuth2User.getAttribute("name");
+    String picture = oAuth2User.getAttribute("picture");
+
+    userRepository
+      .findByEmail(email)
+      .ifPresentOrElse(
+        existingUser ->
+          updateExistingUser(existingUser, name, picture, googleId),
+        () -> createNewUser(email, googleId, name, picture)
+      );
+  }
+
+  private void updateExistingUser(
+    User user,
+    String name,
+    String picture,
+    String googleId
+  ) {
+    boolean updated = false;
+
+    if (name != null && !name.equals(user.getFullName())) {
+      user.setFullName(name);
+      updated = true;
     }
-
-    private void processOAuth2User(OAuth2User oAuth2User) {
-        String email = oAuth2User.getAttribute("email");
-        String googleId = oAuth2User.getAttribute("sub");
-        String name = oAuth2User.getAttribute("name");
-        String picture = oAuth2User.getAttribute("picture");
-
-        userRepository.findByEmail(email)
-                .ifPresentOrElse(
-                        existingUser -> updateExistingUser(existingUser, name, picture, googleId),
-                        () -> createNewUser(email, googleId, name, picture)
-                );
+    if (picture != null && !picture.equals(user.getAvatarUrl())) {
+      user.setAvatarUrl(picture);
+      updated = true;
     }
-
-    private void updateExistingUser(User user, String name, String picture, String googleId) {
-        boolean updated = false;
-
-        if (name != null && !name.equals(user.getFullName())) {
-            user.setFullName(name);
-            updated = true;
-        }
-        if (picture != null && !picture.equals(user.getAvatarUrl())) {
-            user.setAvatarUrl(picture);
-            updated = true;
-        }
-        if (googleId != null && !googleId.equals(user.getGoogleId())) {
-            user.setGoogleId(googleId);
-            updated = true;
-        }
-        // KHÔNG ghi đè role — giữ nguyên role hiện tại
-
-        if (updated) {
-            userRepository.save(user);
-        }
+    if (googleId != null && !googleId.equals(user.getGoogleId())) {
+      user.setGoogleId(googleId);
+      updated = true;
     }
-
-    private void createNewUser(String email, String googleId, String name, String picture) {
-        Role studentRole = roleRepository.findByRoleName(RoleType.STUDENT)
-                .orElseThrow(() -> new ResourceNotFoundException("STUDENT role not found in database"));
-
-        User user = User.builder()
-                .userId(IdGenerator.generateUserId())
-                .email(email)
-                .googleId(googleId)
-                .fullName(name != null ? name : "User")
-                .avatarUrl(picture)
-                .role(studentRole)
-                .isActive(true)
-                .build();
-
-        userRepository.save(user);
-        log.info("Created new user: {} with role: STUDENT", email);
+    // Generate user code nếu chưa có (cho users cũ)
+    if (user.getUserCode() == null) {
+      user.setUserCode(generateUserCode(user.getRole().getRoleName()));
+      updated = true;
     }
+    // KHÔNG ghi đè role — giữ nguyên role hiện tại
+
+    if (updated) {
+      userRepository.save(user);
+    }
+  }
+
+  private void createNewUser(
+    String email,
+    String googleId,
+    String name,
+    String picture
+  ) {
+    Role studentRole = roleRepository
+      .findByRoleName(RoleType.STUDENT)
+      .orElseThrow(() ->
+        new ResourceNotFoundException("STUDENT role not found in database")
+      );
+
+    String userCode = generateUserCode(RoleType.STUDENT);
+
+    User user = User.builder()
+      .userId(IdGenerator.generateUserId())
+      .email(email)
+      .googleId(googleId)
+      .fullName(name != null ? name : "User")
+      .avatarUrl(picture)
+      .role(studentRole)
+      .userCode(userCode)
+      .isActive(true)
+      .build();
+
+    userRepository.save(user);
+    log.info(
+      "Created new user: {} with role: STUDENT, code: {}",
+      email,
+      userCode
+    );
+  }
+
+  /**
+   * Generate user code based on role
+   * Format: HS00001 (Student), GV00001 (Teacher), AD00001 (Admin)
+   */
+  private String generateUserCode(RoleType roleType) {
+    String prefix = switch (roleType) {
+      case STUDENT -> "HS";
+      case TEACHER -> "GV";
+      case ADMIN -> "AD";
+    };
+
+    Integer maxNumber = userRepository.findMaxCodeNumberByPrefix(prefix);
+    int nextNumber = (maxNumber == null) ? 1 : maxNumber + 1;
+
+    return prefix + String.format("%05d", nextNumber);
+  }
 }

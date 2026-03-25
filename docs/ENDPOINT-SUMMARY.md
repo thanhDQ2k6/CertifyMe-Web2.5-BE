@@ -1,75 +1,189 @@
-# Endpoint Summary (Ngắn gọn cho UI)
+# API Endpoints
 
-Nguồn tổng hợp từ code thực tế trong `src/main/java/main/backend/**/controller`.
+Base URL: `http://localhost:8080`
 
-## 1) Public / Auth
+Response format: `{ success, message, data, error }` → FE đọc `response.data.data`
 
-- `GET /oauth2/**`, `GET /login/**` (Spring Security OAuth2 flow, public)
-- `GET /api/auth/me` (đăng nhập rồi mới lấy user)
-- `POST /api/auth/logout`
-- `GET /api/auth/check-role`
+---
 
-## 2) Student
+## AUTH
 
-- `GET /api/student/{studentId}/courses` → dashboard khóa học
-- `GET /api/student/{studentId}/certificates` → danh sách chứng chỉ
-- `GET /api/courses/{courseId}` → chi tiết course theo student context
+| Method | Endpoint                       | Chức năng                         |
+| ------ | ------------------------------ | --------------------------------- |
+| GET    | `/oauth2/authorization/google` | Redirect tới Google OAuth         |
+| GET    | `/api/auth/me`                 | Lấy thông tin user đang đăng nhập |
+| POST   | `/api/auth/logout`             | Đăng xuất                         |
+| GET    | `/api/auth/check-role`         | Kiểm tra role hiện tại            |
 
-## 3) Teacher (Classroom)
+**User object:**
 
-- `GET /api/teacher/{teacherId}/classes` → danh sách lớp giáo viên
-- `GET /api/classes/{classId}` → chi tiết lớp
-- `GET /api/classes/{classId}/students?status=&sort=&order=` → danh sách học viên lớp
-- `POST /api/classes` → tạo lớp
-- `PUT /api/classes/{id}` → cập nhật lớp
+```json
+{
+  "userId": "uuid",
+  "userCode": "HS00001",
+  "email": "...",
+  "fullName": "...",
+  "avatarUrl": "...",
+  "role": "STUDENT|TEACHER|ADMIN",
+  "isActive": true
+}
+```
 
-## 4) Quiz
+---
 
-- `GET /api/classes/{classId}/quizzes` (Student/Teacher)
-- `GET /api/quizzes/{quizId}` (Student/Teacher)
-- `POST /api/quizzes/{quizId}/submit` (Student)
-- `GET /api/quizzes/{quizId}/result` (Student)
-- `POST /api/quizzes` (Teacher)
-- `PUT /api/quizzes/{quizId}` (Teacher)
-- `DELETE /api/quizzes/{quizId}` (Teacher)
-- `GET /api/quizzes/{quizId}/submissions` (Teacher)
+## STUDENT
 
-## 5) Admin
+| Method | Endpoint                                | Chức năng                              |
+| ------ | --------------------------------------- | -------------------------------------- |
+| GET    | `/api/student/{studentId}/courses`      | Dashboard: danh sách khóa học đang học |
+| GET    | `/api/student/{studentId}/certificates` | Danh sách chứng chỉ đã nhận            |
+| GET    | `/api/courses/{courseId}`               | Chi tiết khóa học                      |
 
-- `GET /api/admin/certificates/stats`
-- `GET /api/certificates/recent?limit=&page=`
-- `GET /api/certificates/search?q=&status=&limit=`
-- `GET /api/certificates/{certificateId}`
-- `POST /api/certificates/{certificateId}/revoke`
-- `POST /api/certificates/{certificateId}/verify`
-- `GET /api/admin/users?role=&status=&page=&limit=`
-- `PUT /api/admin/users/{userId}/status`
-- `PUT /api/admin/users/{userId}/role`
+**Flow học viên:**
 
-## 6) Enrollment
+1. Login → `/api/auth/me` → lấy `userId`
+2. Load dashboard → `/api/student/{userId}/courses`
+3. Chọn khóa → xem quizzes của class
+4. Làm quiz → submit → xem kết quả
+5. Hoàn thành → nhận certificate
 
-- `POST /api/enrollments` (Teacher/Admin)
-- `DELETE /api/enrollments/{enrollmentId}` (Teacher/Admin)
+---
 
-## 7) Gợi ý nhóm UI (để lên yêu cầu màn hình)
+## TEACHER
 
-- **Auth**: login OAuth2, callback redirect, profile chip (`/api/auth/me`)
-- **Student**: dashboard khóa học, chứng chỉ, làm quiz, xem kết quả quiz
-- **Teacher**: quản lý lớp, học viên trong lớp, CRUD quiz, xem submissions
-- **Admin**: dashboard chứng chỉ, tra cứu/verify/revoke chứng chỉ, quản lý user
-- **Shared**: form enrollment cho Teacher/Admin
+| Method | Endpoint                           | Chức năng                    |
+| ------ | ---------------------------------- | ---------------------------- |
+| GET    | `/api/teacher/{teacherId}/classes` | Danh sách lớp đang dạy       |
+| GET    | `/api/classes/{classId}`           | Chi tiết lớp                 |
+| POST   | `/api/classes`                     | Tạo lớp mới                  |
+| PUT    | `/api/classes/{classId}`           | Cập nhật lớp                 |
+| GET    | `/api/classes/{classId}/students`  | Danh sách học viên trong lớp |
 
-## 8) Lưu ý tích hợp FE
+**Query params cho `/students`:** `?status=LEARNING|PASSED&sort=name|score|date&order=asc|desc`
 
-- Tất cả API business trả về wrapper: `{ success, message, data, error }`
-- FE nên đọc dữ liệu theo `response.data.data`
-- Role-based access được enforce bởi `@PreAuthorize` + `SecurityConfig`
+**Flow giáo viên:**
 
-## 9) Blockchain placeholder
+1. Login → `/api/auth/me` → lấy `userId`
+2. Load dashboard → `/api/teacher/{userId}/classes`
+3. Quản lý lớp: tạo/sửa class, xem students
+4. Quản lý quiz: CRUD quiz, xem submissions
+5. Thêm học viên: search student → enroll
 
-- Chưa bật luồng blockchain thật (Sepolia).
-- TODO chi tiết tại: `docs/BLOCKCHAIN-TODO-SEPOLIA.md`
+---
 
-## 10) UI direction
+## QUIZ
 
-- Tài liệu định hướng giao diện (phân tích + ưu tiên theo phase): `docs/UI-DIRECTION-ROADMAP.md`
+### Chung (Student + Teacher)
+
+| Method | Endpoint                         | Chức năng               |
+| ------ | -------------------------------- | ----------------------- |
+| GET    | `/api/classes/{classId}/quizzes` | Danh sách quiz của lớp  |
+| GET    | `/api/quizzes/{quizId}`          | Chi tiết quiz + câu hỏi |
+
+### Student only
+
+| Method | Endpoint                       | Chức năng               |
+| ------ | ------------------------------ | ----------------------- |
+| POST   | `/api/quizzes/{quizId}/submit` | Nộp bài quiz            |
+| GET    | `/api/quizzes/{quizId}/result` | Xem kết quả quiz đã làm |
+
+**Submit body:**
+
+```json
+{
+  "studentId": "uuid",
+  "answers": [
+    { "questionId": "1", "selectedOption": "A" },
+    { "questionId": "2", "selectedOption": "C" }
+  ]
+}
+```
+
+### Teacher only
+
+| Method | Endpoint                            | Chức năng              |
+| ------ | ----------------------------------- | ---------------------- |
+| POST   | `/api/quizzes`                      | Tạo quiz mới           |
+| PUT    | `/api/quizzes/{quizId}`             | Cập nhật quiz          |
+| DELETE | `/api/quizzes/{quizId}`             | Xóa quiz (soft delete) |
+| GET    | `/api/quizzes/{quizId}/submissions` | Xem danh sách bài nộp  |
+
+---
+
+## ENROLLMENT
+
+| Method | Endpoint                                 | Role          | Chức năng                 |
+| ------ | ---------------------------------------- | ------------- | ------------------------- |
+| POST   | `/api/enrollments`                       | TEACHER/ADMIN | Ghi danh học viên vào lớp |
+| DELETE | `/api/enrollments?studentCode=&classId=` | TEACHER/ADMIN | Xóa ghi danh              |
+
+**Enroll body (chọn 1):**
+
+```json
+{ "studentCode": "HS00001", "classId": "CLS-001" }
+// hoặc
+{ "studentId": "uuid", "classId": "CLS-001" }
+```
+
+**Delete:** `DELETE /api/enrollments?studentCode=HS00001&classId=CLS-001`
+
+---
+
+## USER SEARCH
+
+| Method | Endpoint                        | Role          | Chức năng                            |
+| ------ | ------------------------------- | ------------- | ------------------------------------ |
+| GET    | `/api/users/{idOrCode}`         | TEACHER/ADMIN | Tìm user bằng UUID hoặc mã (HS00001) |
+| GET    | `/api/users/search/students?q=` | TEACHER/ADMIN | Tìm học viên theo keyword            |
+| GET    | `/api/users/search/teachers?q=` | ADMIN         | Tìm giáo viên theo keyword           |
+
+**Search query:** tìm trong `userCode`, `email`, `fullName`
+
+---
+
+## ADMIN - CERTIFICATES
+
+| Method | Endpoint                                | Chức năng                       |
+| ------ | --------------------------------------- | ------------------------------- |
+| GET    | `/api/admin/certificates/stats`         | Thống kê tổng quan              |
+| GET    | `/api/certificates/recent?limit=&page=` | Danh sách chứng chỉ mới nhất    |
+| GET    | `/api/certificates/search?q=&status=`   | Tìm chứng chỉ                   |
+| GET    | `/api/certificates/{id}`                | Chi tiết chứng chỉ              |
+| POST   | `/api/certificates/{id}/verify`         | Xác minh chứng chỉ (blockchain) |
+| POST   | `/api/certificates/{id}/revoke`         | Thu hồi chứng chỉ               |
+
+---
+
+## ADMIN - USERS
+
+| Method | Endpoint                                      | Chức năng                  |
+| ------ | --------------------------------------------- | -------------------------- |
+| GET    | `/api/admin/users?role=&status=&page=&limit=` | Danh sách users            |
+| PUT    | `/api/admin/users/{userId}/status`            | Kích hoạt/vô hiệu hóa user |
+| PUT    | `/api/admin/users/{userId}/role`              | Đổi role user              |
+
+---
+
+## User Code Format
+
+| Prefix | Role                | Ví dụ   |
+| ------ | ------------------- | ------- |
+| HS     | Học Sinh (Student)  | HS00001 |
+| GV     | Giáo Viên (Teacher) | GV00001 |
+| AD     | Admin               | AD00001 |
+
+Auto-generated khi user đăng nhập Google lần đầu.
+
+---
+
+## HTTP Status
+
+| Code | Ý nghĩa            |
+| ---- | ------------------ |
+| 200  | OK                 |
+| 201  | Tạo thành công     |
+| 400  | Request sai format |
+| 401  | Chưa đăng nhập     |
+| 403  | Không có quyền     |
+| 404  | Không tìm thấy     |
+| 500  | Lỗi server         |

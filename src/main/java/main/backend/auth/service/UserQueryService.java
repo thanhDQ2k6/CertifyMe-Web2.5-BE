@@ -15,7 +15,11 @@ public interface UserQueryService {
 
   Optional<User> findByEmail(String email);
 
+  Optional<User> findByIdOrCode(String idOrCode);
+
   User getByIdOrThrow(String userId);
+
+  User getByIdOrCodeOrThrow(String idOrCode);
 
   List<User> findAll();
 

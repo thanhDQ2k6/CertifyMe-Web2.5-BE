@@ -28,11 +28,25 @@ public class UserQueryServiceImpl implements UserQueryService {
   }
 
   @Override
+  public Optional<User> findByIdOrCode(String idOrCode) {
+    return userRepository.findByUserIdOrUserCode(idOrCode);
+  }
+
+  @Override
   public User getByIdOrThrow(String userId) {
     return userRepository
       .findById(userId)
       .orElseThrow(() ->
         new ResourceNotFoundException("User not found: " + userId)
+      );
+  }
+
+  @Override
+  public User getByIdOrCodeOrThrow(String idOrCode) {
+    return userRepository
+      .findByUserIdOrUserCode(idOrCode)
+      .orElseThrow(() ->
+        new ResourceNotFoundException("User not found: " + idOrCode)
       );
   }
 
