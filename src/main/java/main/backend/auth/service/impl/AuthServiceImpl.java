@@ -6,6 +6,7 @@ import main.backend.auth.entity.User;
 import main.backend.auth.repository.UserRepository;
 import main.backend.auth.security.UserPrincipal;
 import main.backend.auth.service.AuthService;
+import main.backend.common.exception.ResourceNotFoundException;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -18,10 +19,11 @@ public class AuthServiceImpl implements AuthService {
   public UserResponse getCurrentUser(UserPrincipal userPrincipal) {
     User user = userRepository
       .findById(userPrincipal.getUserId())
-      .orElseThrow(() -> new RuntimeException("User not found"));
+      .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
     return UserResponse.builder()
       .userId(user.getUserId())
+      .userCode(user.getUserCode())
       .email(user.getEmail())
       .fullName(user.getFullName())
       .avatarUrl(user.getAvatarUrl())

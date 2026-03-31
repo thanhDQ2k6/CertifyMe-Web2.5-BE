@@ -13,6 +13,7 @@ import main.backend.auth.enums.RoleType;
 public class UserResponse {
 
   private String userId;
+  private String userCode; // HS00001, GV00001, AD00001
   private String email;
   private String fullName;
   private String avatarUrl;

@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import main.backend.auth.entity.User;
 import main.backend.auth.repository.UserRepository;
+import main.backend.common.exception.ResourceNotFoundException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
@@ -38,7 +39,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         User user = userRepository
           .findById(userId)
-          .orElseThrow(() -> new RuntimeException("User not found"));
+          .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         UserPrincipal userPrincipal = UserPrincipal.create(user);
 
