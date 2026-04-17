@@ -13,7 +13,7 @@ public class Web3jConfig {
   @Value("${app.blockchain.rpc-url}")
   private String rpcUrl;
 
-  @Value("${app.blockchain.private-key}")
+  @Value("${app.blockchain.wallet-private-key}")
   private String privateKey;
 
   @Bean

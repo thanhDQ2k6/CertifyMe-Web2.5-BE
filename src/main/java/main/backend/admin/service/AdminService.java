@@ -1,9 +1,12 @@
 package main.backend.admin.service;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Locale;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,15 +21,18 @@ import main.backend.blockchain.service.BlockchainCertificateService;
 import main.backend.certificate.entity.Certificate;
 import main.backend.certificate.repository.CertificateRepository;
 import main.backend.common.enums.CertificateStatus;
+import main.backend.common.exception.BusinessException;
 import main.backend.common.exception.ResourceNotFoundException;
 import main.backend.enrollment.entity.Enrollment;
 import main.backend.enrollment.repository.EnrollmentRepository;
 import main.backend.quiz.entity.QuizAttempt;
 import main.backend.quiz.repository.QuizAttemptRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Service
@@ -40,6 +46,12 @@ public class AdminService {
   private final UserRepository userRepository; // admin needs write access to users
   private final RoleRepository roleRepository;
   private final BlockchainCertificateService blockchainCertificateService;
+
+  @Value("${app.blockchain.network:sepolia}")
+  private String blockchainNetwork;
+
+  @Value("${app.blockchain.explorer-base-url:https://sepolia.etherscan.io/tx/}")
+  private String blockchainExplorerBaseUrl;
 
   private static final DateTimeFormatter ISO_FORMATTER =
     DateTimeFormatter.ISO_INSTANT;
@@ -68,7 +80,11 @@ public class AdminService {
     CertificateStatus status = null;
 
     if (statusStr != null && !statusStr.isEmpty()) {
-      status = CertificateStatus.valueOf(statusStr.toUpperCase());
+      try {
+        status = CertificateStatus.valueOf(statusStr.toUpperCase());
+      } catch (IllegalArgumentException e) {
+        throw new BusinessException("Invalid certificate status: " + statusStr);
+      }
     }
 
     Page<Certificate> certPage;
@@ -111,6 +127,7 @@ public class AdminService {
       .build();
   }
 
+  @Transactional
   public RevokeResponse revokeCertificate(
     String certificateId,
     RevokeRequest request
@@ -167,8 +184,8 @@ public class AdminService {
         .transactionHash(c.getTransactionHash())
         .blockNumber(null)
         .contractAddress(c.getContractAddress())
-        .networkName("Ethereum Mainnet")
-        .explorerUrl("https://etherscan.io/tx/" + c.getTransactionHash())
+        .networkName(formatNetworkName(blockchainNetwork))
+        .explorerUrl(buildExplorerUrl(c.getTransactionHash()))
         .build();
     }
 
@@ -179,6 +196,7 @@ public class AdminService {
 
     List<QuizResult> quizResults = attempts
       .stream()
+      .filter(qa -> qa.getQuiz() != null)
       .map(qa ->
         QuizResult.builder()
           .quizId(qa.getQuiz().getQuizId())
@@ -218,13 +236,32 @@ public class AdminService {
         new ResourceNotFoundException("Certificate not found: " + certificateId)
       );
 
-    boolean isValid =
-      c.getCertificateHash() != null && !c.getCertificateHash().isEmpty();
+    String dbHash = normalizeHash(c.getCertificateHash());
+    String expectedHash = normalizeHash(generateCertificateHashFromDbData(c));
+    boolean dbHashMatches = dbHash != null && dbHash.equals(expectedHash);
 
-    if (!isValid) {
-      throw new IllegalArgumentException(
-        "Certificate verification failed: Hash mismatch"
-      );
+    BlockchainCertificateService.OnChainCertificate onChainCert =
+      blockchainCertificateService.getCertificateOnChain(certificateId);
+    String onChainHash = normalizeHash(onChainCert.getCertHash());
+
+    boolean chainRecordMatchesId = certificateId.equals(
+      onChainCert.getCertId()
+    );
+    boolean chainHashMatches = dbHash != null && dbHash.equals(onChainHash);
+    boolean onChainValid = onChainCert.isValid();
+
+    boolean isValid =
+      dbHashMatches && chainRecordMatchesId && chainHashMatches && onChainValid;
+
+    String verificationStatus;
+    if (isValid) {
+      verificationStatus = "confirmed";
+    } else if (
+      dbHashMatches && chainRecordMatchesId && chainHashMatches && !onChainValid
+    ) {
+      verificationStatus = "revoked";
+    } else {
+      verificationStatus = "mismatch";
     }
 
     BlockchainVerificationInfo bcInfo = BlockchainVerificationInfo.builder()
@@ -232,12 +269,12 @@ public class AdminService {
       .blockNumber(null)
       .contractAddress(c.getContractAddress())
       .timestamp(formatDate(c.getIssueDate()))
-      .status("confirmed")
+      .status(verificationStatus)
       .build();
 
     return CertificateVerificationResult.builder()
       .certificateId(c.getCertificateId())
-      .isValid(true)
+      .isValid(isValid)
       .verificationHash(c.getCertificateHash())
       .blockchainInfo(bcInfo)
       .verifiedAt(formatDateTime(LocalDateTime.now()))
@@ -254,7 +291,12 @@ public class AdminService {
 
     Long roleId = null;
     if (roleStr != null && !roleStr.isEmpty()) {
-      RoleType roleType = RoleType.valueOf(roleStr.toUpperCase());
+      RoleType roleType;
+      try {
+        roleType = RoleType.valueOf(roleStr.toUpperCase());
+      } catch (IllegalArgumentException e) {
+        throw new BusinessException("Invalid role: " + roleStr);
+      }
       roleId = roleRepository
         .findByRoleName(roleType)
         .map(Role::getRoleId)
@@ -304,6 +346,7 @@ public class AdminService {
       .build();
   }
 
+  @Transactional
   public UpdateUserStatusResponse updateUserStatus(
     String userId,
     UpdateUserStatusRequest request
@@ -320,6 +363,7 @@ public class AdminService {
       .build();
   }
 
+  @Transactional
   public UpdateUserRoleResponse updateUserRole(
     String userId,
     UpdateUserRoleRequest request
@@ -327,7 +371,12 @@ public class AdminService {
     User user = userQueryService.getByIdOrThrow(userId);
     String previousRole = user.getRole().getRoleName().name();
 
-    RoleType roleType = RoleType.valueOf(request.getRole().toUpperCase());
+    RoleType roleType;
+    try {
+      roleType = RoleType.valueOf(request.getRole().toUpperCase());
+    } catch (IllegalArgumentException e) {
+      throw new BusinessException("Invalid role: " + request.getRole());
+    }
     Role role = roleRepository
       .findByRoleName(roleType)
       .orElseThrow(() ->
@@ -368,5 +417,87 @@ public class AdminService {
   private String formatInstant(java.time.Instant instant) {
     if (instant == null) return null;
     return instant.toString();
+  }
+
+  private String generateCertificateHashFromDbData(Certificate certificate) {
+    if (
+      certificate.getStudent() == null ||
+      certificate.getClassEntity() == null ||
+      certificate.getIssueDate() == null
+    ) {
+      return null;
+    }
+
+    String hashInput =
+      certificate.getStudent().getUserId() +
+      ":" +
+      certificate.getClassEntity().getClassId() +
+      ":" +
+      certificate.getCertificateId() +
+      ":" +
+      certificate.getIssueDate().toEpochDay();
+
+    return generateSha256Hash(hashInput);
+  }
+
+  private String generateSha256Hash(String input) {
+    if (input == null || input.isBlank()) {
+      return null;
+    }
+
+    try {
+      MessageDigest digest = MessageDigest.getInstance("SHA-256");
+      byte[] encodedHash = digest.digest(
+        input.getBytes(StandardCharsets.UTF_8)
+      );
+      StringBuilder hexString = new StringBuilder(2 * encodedHash.length);
+      hexString.append("0x");
+      for (byte b : encodedHash) {
+        String hex = Integer.toHexString(0xff & b);
+        if (hex.length() == 1) {
+          hexString.append('0');
+        }
+        hexString.append(hex);
+      }
+      return hexString.toString();
+    } catch (Exception e) {
+      throw new RuntimeException("Failed to generate certificate hash", e);
+    }
+  }
+
+  private String normalizeHash(String hash) {
+    if (hash == null || hash.isBlank()) {
+      return null;
+    }
+    return hash.trim().toLowerCase(Locale.ROOT);
+  }
+
+  private String formatNetworkName(String network) {
+    if (network == null || network.isBlank()) {
+      return "Ethereum Sepolia";
+    }
+
+    String normalized = network.trim().toLowerCase(Locale.ROOT);
+    if ("sepolia".equals(normalized)) {
+      return "Ethereum Sepolia";
+    }
+    if ("mainnet".equals(normalized) || "ethereum".equals(normalized)) {
+      return "Ethereum Mainnet";
+    }
+
+    return network;
+  }
+
+  private String buildExplorerUrl(String transactionHash) {
+    String base =
+      blockchainExplorerBaseUrl != null
+        ? blockchainExplorerBaseUrl.trim()
+        : "https://sepolia.etherscan.io/tx/";
+
+    if (!base.endsWith("/")) {
+      base = base + "/";
+    }
+
+    return base + transactionHash;
   }
 }

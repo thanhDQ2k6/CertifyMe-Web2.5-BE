@@ -39,7 +39,7 @@ public class CertificateService {
   private final ClassRepository classRepository;
   private final UserRepository userRepository;
 
-  @Value("${app.blockchain.contract.certificate-address}")
+  @Value("${app.blockchain.contract-address}")
   private String contractAddress;
 
   // FIX CB3: trả đầy đủ fields: certificateId, averageScore, status, blockchainInfo

@@ -92,6 +92,8 @@ public class SecurityConfig {
           // Teacher endpoints
           .requestMatchers("/api/teacher/**")
           .hasRole("TEACHER")
+          .requestMatchers(HttpMethod.GET, "/api/classes/*/quizzes")
+          .hasAnyRole("STUDENT", "TEACHER")
           .requestMatchers("/api/classes/**")
           .hasRole("TEACHER")
           .requestMatchers(HttpMethod.GET, "/api/quizzes/*")

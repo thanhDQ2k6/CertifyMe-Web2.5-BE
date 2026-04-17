@@ -108,6 +108,7 @@ public class CourseService {
     var response = CourseDetailResponse.builder()
       .courseName(course.getCourseName())
       .courseCode(course.getCourseCode())
+      .classId(clazz.getClassId())
       .teacherName(teacher != null ? teacher.getFullName() : null)
       .startDate(
         clazz.getStartDate() != null ? clazz.getStartDate().toString() : null
