@@ -89,7 +89,7 @@ Tài liệu này tổng hợp các thay đổi, sửa lỗi và cập nhật Res
 
 ### 3.3. Cập nhật Model: Xoá bỏ field `blockNumber`
 
-- **Endpoints ảnh hưởng:** 
+- **Endpoints ảnh hưởng:**
   - `GET /api/student/{studentId}/certificates`
   - `GET /api/certificates/{certificateId}`
   - `GET /api/courses/{courseId}` (Trong phần chi tiết chứng chỉ)
