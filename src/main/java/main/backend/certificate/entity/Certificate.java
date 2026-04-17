@@ -28,9 +28,6 @@ public class Certificate {
   @Column(name = "expiration_date")
   private java.time.LocalDate expirationDate;
 
-  @Column(name = "block_number")
-  private Long blockNumber;
-
   @Column(name = "contract_address")
   private String contractAddress;
 

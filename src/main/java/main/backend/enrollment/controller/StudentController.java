@@ -37,4 +37,17 @@ public class StudentController {
       certificateService.getCertificatesByStudentId(studentId);
     return ResponseEntity.ok(ApiResponse.success(data));
   }
+
+  @PostMapping("/{studentId}/classes/{classId}/certificates/issue")
+  @PreAuthorize("hasRole('STUDENT')")
+  public ResponseEntity<ApiResponse<CertificateResponse>> issueCertificate(
+    @PathVariable String studentId,
+    @PathVariable String classId
+  ) {
+    CertificateResponse data = certificateService.issueCertificate(
+      studentId,
+      classId
+    );
+    return ResponseEntity.ok(ApiResponse.success(data));
+  }
 }
