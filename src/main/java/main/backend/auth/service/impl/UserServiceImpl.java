@@ -29,7 +29,7 @@ public class UserServiceImpl implements UserService {
   public List<UserResponse> searchStudents(String keyword) {
     List<User> users = userRepository.searchByKeywordAndRole(
       keyword,
-      "STUDENT"
+      main.backend.auth.enums.RoleType.STUDENT
     );
     return users.stream().map(this::mapToResponse).toList();
   }
@@ -38,7 +38,7 @@ public class UserServiceImpl implements UserService {
   public List<UserResponse> searchTeachers(String keyword) {
     List<User> users = userRepository.searchByKeywordAndRole(
       keyword,
-      "TEACHER"
+      main.backend.auth.enums.RoleType.TEACHER
     );
     return users.stream().map(this::mapToResponse).toList();
   }

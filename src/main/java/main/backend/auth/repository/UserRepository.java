@@ -41,7 +41,9 @@ public interface UserRepository extends JpaRepository<User, String> {
   )
   List<User> searchByKeywordAndRole(
     @org.springframework.data.repository.query.Param("keyword") String keyword,
-    @org.springframework.data.repository.query.Param("roleName") String roleName
+    @org.springframework.data.repository.query.Param(
+      "roleName"
+    ) main.backend.auth.enums.RoleType roleName
   );
 
   @Query(

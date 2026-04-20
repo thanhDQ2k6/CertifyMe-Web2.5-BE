@@ -1,0 +1,43 @@
+### Test Certificate API Endpoints
+# Yêu cầu cài extension "REST Client" trên VS Code để chạy trực tiếp từ file này
+
+@baseUrl = http://localhost:8080/api
+# Thay đổi token này bằng JWT token thật của học sinh/admin sau khi login
+@studentToken = Bearer eyJhbG... 
+@adminToken = Bearer eyJhbG...
+
+@studentId = user_student_id_here
+@classId = class_id_here
+@certificateId = cert_id_here
+
+### 1. Học sinh tự cấp chứng chỉ (Sẽ tốn Gas fee trên Sepolia Testnet)
+POST {{baseUrl}}/student/{{studentId}}/classes/{{classId}}/certificates/issue
+Authorization: {{studentToken}}
+Content-Type: application/json
+
+{}
+
+### 2. Xem danh sách chứng chỉ của học sinh
+GET {{baseUrl}}/student/{{studentId}}/certificates
+Authorization: {{studentToken}}
+
+### 3. Admin xem chi tiết chứng chỉ (Xem Hash và Transaction)
+GET {{baseUrl}}/certificates/{{certificateId}}
+Authorization: {{adminToken}}
+
+### 4. Admin Verify chứng chỉ (Kiểm tra Hash)
+POST {{baseUrl}}/certificates/{{certificateId}}/verify
+Authorization: {{adminToken}}
+Content-Type: application/json
+
+{}
+
+### 5. Admin thu hồi chứng chỉ (Sẽ tốn Gas fee trên Sepolia Testnet)
+POST {{baseUrl}}/certificates/{{certificateId}}/revoke
+Authorization: {{adminToken}}
+Content-Type: application/json
+
+{
+  "revokedBy": "admin_user_id_here",
+  "reason": "Phát hiện gian lận trong kỳ thi"
+}
