@@ -82,6 +82,8 @@ public class SecurityConfig {
           .permitAll()
           .requestMatchers("/api/auth/**")
           .permitAll()
+          .requestMatchers(HttpMethod.GET, "/api/public/**")
+          .permitAll()
           // Student endpoints
           .requestMatchers("/api/student/**")
           .hasRole("STUDENT")

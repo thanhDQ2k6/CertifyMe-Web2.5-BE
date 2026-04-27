@@ -3,6 +3,9 @@ package main.backend.auth.repository;
 import java.util.List;
 import java.util.Optional;
 import main.backend.auth.entity.User;
+import main.backend.auth.enums.RoleType;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -57,5 +60,21 @@ public interface UserRepository extends JpaRepository<User, String> {
       "isActive"
     ) Boolean isActive,
     org.springframework.data.domain.Pageable pageable
+  );
+
+  // Public recruiter search by student code or student name
+  @Query(
+    "SELECT u FROM User u WHERE " +
+      "u.role.roleName = :roleName AND u.isActive = true AND " +
+      "(:keyword IS NULL OR :keyword = '' OR " +
+      "LOWER(u.userCode) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+      "LOWER(u.fullName) LIKE LOWER(CONCAT('%', :keyword, '%')))"
+  )
+  Page<User> searchPublicStudents(
+    @org.springframework.data.repository.query.Param("keyword") String keyword,
+    @org.springframework.data.repository.query.Param(
+      "roleName"
+    ) RoleType roleName,
+    Pageable pageable
   );
 }

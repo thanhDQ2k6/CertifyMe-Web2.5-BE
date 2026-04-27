@@ -41,3 +41,16 @@ Content-Type: application/json
   "revokedBy": "admin_user_id_here",
   "reason": "Phát hiện gian lận trong kỳ thi"
 }
+
+### ------------------------------------------------------------
+### PUBLIC CERTIFICATE VERIFICATION (Không cần đăng nhập)
+### ------------------------------------------------------------
+
+### 6. Search học sinh theo tên/mã (student code)
+GET {{baseUrl}}/public/students/search?q=HS00001&page=1&limit=20
+
+### 7. Lấy chi tiết học sinh + full certificates theo student code
+GET {{baseUrl}}/public/students/HS00001
+
+### 8. Xác minh certificate trên blockchain (public)
+GET {{baseUrl}}/public/certificates/{{certificateId}}/verify
